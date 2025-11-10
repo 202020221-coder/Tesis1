@@ -1,0 +1,1 @@
+export { GestionarPersonal } from "./GestionarProyectos/GestionarProyectos";
