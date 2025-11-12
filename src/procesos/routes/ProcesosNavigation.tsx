@@ -6,11 +6,12 @@ import type { IPrivateRoute } from '@/shared/routes/routes';
 
 import { NotFoundPage } from '@/shared/pages';
 import { GestionarPersonal} from '../pages';
+import { Menu } from '../pages/GestionarProyectos/Menu';
 
 const routes: IPrivateRoute[] = [
   {
     path: '/',
-    Component: GestionarPersonal,
+    Component: Menu,
     roles: [ ]
   },
 ]

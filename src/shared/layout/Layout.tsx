@@ -10,9 +10,10 @@ interface Props {
   children: ReactElement | ReactElement[];
   breadcrumbs?: IBreadcrumb[];
   title: string;
+  className?: string;
 }
 
-export const Layout = ({children, breadcrumbs = [], title}: Props) => {
+export const Layout = ({children, breadcrumbs = [], title, className = "flex flex-1 flex-col gap-4 p-4 pt-2"}: Props) => {
   return (
     <>
       <SidebarProvider>
@@ -25,7 +26,7 @@ export const Layout = ({children, breadcrumbs = [], title}: Props) => {
               <CustomBreadcrumb links={breadcrumbs} title={title} />
             </div>
           </header>
-          <main className="flex flex-1 flex-col gap-4 p-4 pt-2">
+          <main className={className}>
             {children}
           </main>
         </SidebarInset>

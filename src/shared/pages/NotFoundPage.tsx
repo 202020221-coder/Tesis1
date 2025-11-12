@@ -43,7 +43,7 @@ export const NotFoundPage = () => {
       </p>
 
       <Link
-        to="/intranet/home"
+        to="/"
         className="mt-9 inline-flex items-center gap-2 rounded-xl bg-primary px-4 py-2 sm:px-6 sm:py-3 text-white shadow transition hover:scale-105 hover:bg-primary/90 text-xl sm:text-2xl font-mono"
       >
         Volver

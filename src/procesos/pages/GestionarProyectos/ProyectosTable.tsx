@@ -123,7 +123,7 @@ export function PersonalTable({
   return (
     <div className="p-6 space-y-6">
       <div className="space-y-4">
-        <h1 className="text-3xl font-bold text-foreground">Directorio</h1>
+        <h1 className="text-3xl font-bold text-foreground">Proyectos</h1>
 
         {/* Tabs */}
         <div className="flex gap-8 border-b border-border">

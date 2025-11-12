@@ -25,7 +25,7 @@ export const GestionarPersonal = () => {
   }
 
   return (
-    <Layout title = "Gestionar personal">
+    <Layout title = "Gestionar Proyectos">
       {view === "table" ? (
         <PersonalTable onEdit={handleEdit} onAdd={handleAdd} activeTab={activeTab} setActiveTab={setActiveTab} />
       ) : (
