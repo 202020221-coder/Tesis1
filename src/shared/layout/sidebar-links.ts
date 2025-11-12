@@ -36,4 +36,25 @@ export const sidebarLinks: IMenu[] = [
       },
     ]
   },
+     {
+    title: 'Inventario',
+    roles: [],
+    items: [
+      {
+        title: 'Gestion de Inventario',
+        roles: [],
+        url: '/Inventario'
+      },
+            {
+        title: 'Inventario de Camiones',
+        roles: [],
+        url: '/inventario/camiones'
+      },
+                  {
+        title: 'Gestion de Camiones',
+        roles: [],
+        url: '/inventario/gestionar-camiones'
+      },
+    ]
+  },
 ]
