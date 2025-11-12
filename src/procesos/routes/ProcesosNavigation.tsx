@@ -5,15 +5,36 @@ import { PrivateRoute } from '@/shared/routes/PrivateRoute';
 import type { IPrivateRoute } from '@/shared/routes/routes';
 
 import { NotFoundPage } from '@/shared/pages';
-import { GestionarPersonal} from '../pages';
+import { GestionarPersonal,MenuAnalisis,MenuClientes,MenuCotizaciones,MenuProyectos} from '../pages'
 import { Menu } from '../pages/GestionarProyectos/Menu';
 
 const routes: IPrivateRoute[] = [
-  {
+      {
     path: '/',
     Component: Menu,
     roles: [ ]
   },
+  {
+    path: '/analisis',
+    Component: MenuAnalisis,
+    roles: [ ]
+  },
+    {
+    path: '/clientes',
+    Component: MenuClientes,
+    roles: [ ]
+  },
+    {
+    path: '/cotizaciones',
+    Component: MenuCotizaciones,
+    roles: [ ]
+  },
+    {
+    path: '/proyectos',
+    Component: MenuProyectos,
+    roles: [ ]
+  },
+
 ]
 
 export const ProcesosNavigation = () => {

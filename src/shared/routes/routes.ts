@@ -24,7 +24,7 @@ export const routes:IRoute[] = [
         Component: DirectorioNavigation,
     },
         {
-        path: '/procesos',
+        path: '/procesos/*',
         Component: ProcesosNavigation,
     },
             {
