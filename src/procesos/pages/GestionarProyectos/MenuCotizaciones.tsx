@@ -14,12 +14,18 @@ interface Cotizacion {
   cliente: string
   fechaEmision: string
   monto: number
+  objeto: ObjetoItem[] 
   estado: "pendiente" | "aprobada" | "rechazada" | "enviada" | "vencida"
   fechaVencimiento: string
   descripcion: string
   validez: number
 }
-
+interface ObjetoItem {
+  nombre: string
+  cantidad: number
+  precio: number
+  
+}
 interface MenuCotizacionesProps {
   cotizaciones?: Cotizacion[]
   onAgregar?: (cotizacion: Cotizacion) => void
@@ -51,7 +57,10 @@ export function MenuCotizaciones({
   const [filtroCliente, setFiltroCliente] = useState("")
   const [detalleId, setDetalleId] = useState<string | null>(null)
 
-  const [formData, setFormData] = useState<Partial<Cotizacion>>({
+  const [formData, setFormData] = useState<Partial<Cotizacion>& {
+  objetoSeleccionado?: ObjetoItem | null;
+  cantidad?: number
+}>({
     numeroRef: "",
     cliente: "",
     fechaEmision: new Date().toISOString().split("T")[0],
@@ -60,12 +69,22 @@ export function MenuCotizaciones({
     fechaVencimiento: "",
     descripcion: "",
     validez: 30,
+    objeto: [],
+    objetoSeleccionado: null,
+    cantidad: 1
   })
-
+const objetosDisponibles = [
+  { nombre: "Laptop Dell", precio: 1200 },
+  { nombre: "Monitor Samsung", precio: 300 },
+  { nombre: "Teclado Mecánico", precio: 90 },
+  { nombre: "Mouse Logitech", precio: 45 },
+  { nombre: "Escritorio Gamer", precio: 250 }
+];
   const handleFormChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target
     setFormData((prev) => ({
       ...prev,
+      [name]: name === "cantidad" ? Number(value) : value,
       [name]: name === "monto" || name === "validez" ? Number(value) : value,
     }))
   }
@@ -91,6 +110,14 @@ export function MenuCotizaciones({
         fechaVencimiento: formData.fechaVencimiento || "",
         descripcion: formData.descripcion || "",
         validez: formData.validez || 30,
+        objeto: [
+          {
+            nombre: formData.objetoSeleccionado?.nombre || "",
+            precio: formData.objetoSeleccionado?.precio || 0,
+            cantidad: formData.cantidad || 1
+          }
+        ]
+
       }
       setCotizaciones([...cotizaciones, newCotizacion])
       onAgregar?.(newCotizacion)
@@ -108,6 +135,7 @@ export function MenuCotizaciones({
       fechaVencimiento: "",
       descripcion: "",
       validez: 30,
+
     })
     setShowForm(false)
     setEditingId(null)
@@ -117,7 +145,11 @@ export function MenuCotizaciones({
   const handleEdit = (id: string) => {
     const cotizacion = cotizaciones.find((c) => c.id === id)
     if (cotizacion) {
-      setFormData(cotizacion)
+        setFormData({
+    ...cotizacion,
+    objetoSeleccionado: cotizacion.objeto[0] || null,
+    cantidad: cotizacion.objeto[0]?.cantidad || 1
+  })
       setEditingId(id)
       setShowForm(true)
       setDetalleId(null)
@@ -156,7 +188,7 @@ export function MenuCotizaciones({
     // Placeholder para implementar exportación a PDF
     alert(`Exportando cotización ${cotizacion.numeroRef} a PDF...`)
   }
-
+  
   return (
     <Layout className="w-full space-y-6" title="Gestionar Cotizaciones">
       <div className='px-5'>
@@ -288,8 +320,64 @@ export function MenuCotizaciones({
               </div>
 
               <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+                                <div>
+                  <Label>Objeto</Label>
+                  <Select
+                    value={formData.objetoSeleccionado?.nombre ?? ""}
+                    onValueChange={(value) => {
+                      const seleccionado = objetosDisponibles.find(o => o.nombre === value)
+
+                      setFormData(prev => ({
+                      ...prev,
+                      objetoSeleccionado: seleccionado
+                        ? {
+                            nombre: seleccionado.nombre,
+                            precio: seleccionado.precio,
+                            cantidad: prev.cantidad ?? 1
+                          }
+                        : null,
+                      monto: seleccionado?.precio ?? 0
+                    }))
+
+                    }}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Selecciona un objeto" />
+                    </SelectTrigger>
+
+                    <SelectContent>
+                      {objetosDisponibles.map((obj, index) => (
+                        <SelectItem key={index} value={obj.nombre}>
+                          {obj.nombre}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+
+
+                </div>
                 <div>
-                  <Label>Monto (USD) *</Label>
+                  <Label>Precio real (USD) *</Label>
+                  <Input
+                    name="monto"
+                    type="number"
+                    value={formData.objetoSeleccionado?.precio ?? ""}
+                    required
+                    readOnly
+                  />
+                </div>
+                <div>
+                  <Label>Cantidad</Label>
+                  <Input
+                    type="number"
+                    value={formData.cantidad || 1}
+                    onChange={handleFormChange}
+                    min={1}
+                    required
+                  />
+                </div>
+                <div>
+                  <Label>A cotizar por unidad (USD) *</Label>
                   <Input
                     name="monto"
                     type="number"
@@ -297,6 +385,15 @@ export function MenuCotizaciones({
                     onChange={handleFormChange}
                     placeholder="0.00"
                     step="0.01"
+                    required
+                  />
+                </div>
+                                <div>
+                  <Label>Total por este objeto(USD) *</Label>
+                  <Input
+                    type="number"
+                    value={(formData.cantidad * formData.monto)}
+                    
                     required
                   />
                 </div>
