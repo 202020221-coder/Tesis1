@@ -24,7 +24,7 @@ interface ObjetoItem {
   nombre: string
   cantidad: number
   precio: number
-  
+  monto: number
 }
 interface MenuCotizacionesProps {
   cotizaciones?: Cotizacion[]
@@ -57,22 +57,19 @@ export function MenuCotizaciones({
   const [filtroCliente, setFiltroCliente] = useState("")
   const [detalleId, setDetalleId] = useState<string | null>(null)
 
-  const [formData, setFormData] = useState<Partial<Cotizacion>& {
-  objetoSeleccionado?: ObjetoItem | null;
-  cantidad?: number
-}>({
-    numeroRef: "",
-    cliente: "",
-    fechaEmision: new Date().toISOString().split("T")[0],
-    monto: 0,
-    estado: "pendiente",
-    fechaVencimiento: "",
-    descripcion: "",
-    validez: 30,
-    objeto: [],
-    objetoSeleccionado: null,
-    cantidad: 1
-  })
+const [formData, setFormData] = useState<Partial<Cotizacion>>({
+  numeroRef: "",
+  cliente: "",
+  fechaEmision: new Date().toISOString().split("T")[0],
+  monto: 0,
+  estado: "pendiente",
+  fechaVencimiento: "",
+  descripcion: "",
+  validez: 30,
+  objeto: []   // <<--- aquí vive el listado editable
+});
+
+  //dummy que ve los objetos
 const objetosDisponibles = [
   { nombre: "Laptop Dell", precio: 1200 },
   { nombre: "Monitor Samsung", precio: 300 },
@@ -80,6 +77,41 @@ const objetosDisponibles = [
   { nombre: "Mouse Logitech", precio: 45 },
   { nombre: "Escritorio Gamer", precio: 250 }
 ];
+//aniade una nueva fila
+
+//nuevo objeto
+const handleAddObjeto = () => {
+  setFormData(prev => ({
+    ...prev,
+    objeto: [
+      ...(prev.objeto ?? []),
+      { nombre: "", cantidad: 1, precio: 0, monto: 0 }
+    ]
+  }));
+};
+//modifica una fila
+const handleObjetoChange = (index: number, field: string, value: any) => {
+  setFormData(prev => {
+    const updated = [...(prev.objeto ?? [])];
+    updated[index] = {
+      ...updated[index],
+      [field]: field === "cantidad" || field === "precio" || field === "monto"
+        ? Number(value)
+        : value
+    };
+    return { ...prev, objeto: updated };
+  });
+};
+const handleRemoveObjeto = (index: number) => {
+  setFormData(prev => {
+    const updated = [...(prev.objeto ?? [])];
+    updated.splice(index, 1);
+    return { ...prev, objeto: updated };
+  });
+};
+
+
+
   const handleFormChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target
     setFormData((prev) => ({
@@ -110,13 +142,7 @@ const objetosDisponibles = [
         fechaVencimiento: formData.fechaVencimiento || "",
         descripcion: formData.descripcion || "",
         validez: formData.validez || 30,
-        objeto: [
-          {
-            nombre: formData.objetoSeleccionado?.nombre || "",
-            precio: formData.objetoSeleccionado?.precio || 0,
-            cantidad: formData.cantidad || 1
-          }
-        ]
+        objeto: formData.objeto || []
 
       }
       setCotizaciones([...cotizaciones, newCotizacion])
@@ -320,82 +346,112 @@ const objetosDisponibles = [
               </div>
 
               <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-                                <div>
-                  <Label>Objeto</Label>
-                  <Select
-                    value={formData.objetoSeleccionado?.nombre ?? ""}
-                    onValueChange={(value) => {
-                      const seleccionado = objetosDisponibles.find(o => o.nombre === value)
+                 <div className="col-span-1 md:col-span-4">
+                  <div className="flex flex-col md:flex-row items-center gap-4 p-4 bg-gray-100 rounded-lg border">
+                    <div className="col-span-1 md:col-span-4 space-y-4">
 
-                      setFormData(prev => ({
-                      ...prev,
-                      objetoSeleccionado: seleccionado
-                        ? {
-                            nombre: seleccionado.nombre,
-                            precio: seleccionado.precio,
-                            cantidad: prev.cantidad ?? 1
-                          }
-                        : null,
-                      monto: seleccionado?.precio ?? 0
-                    }))
+                        {/* Título y botón agregar */}
+                        <div className="flex justify-between items-center">
+                          <Label className="font-semibold">Objetos a cotizar</Label>
 
-                    }}
-                  >
-                    <SelectTrigger>
-                      <SelectValue placeholder="Selecciona un objeto" />
-                    </SelectTrigger>
+                          <Button
+                            type="button"
+                            onClick={handleAddObjeto}
+                            className="bg-blue-600 hover:bg-blue-700"
+                          >
+                            <Plus size={18} />
+                          </Button>
+                        </div>
 
-                    <SelectContent>
-                      {objetosDisponibles.map((obj, index) => (
-                        <SelectItem key={index} value={obj.nombre}>
-                          {obj.nombre}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
+                        {/* Listado vertical de objetos */}
+                        {(formData.objeto ?? []).map((obj, index) => (
+                          <div
+                            key={index}
+                            className="p-4 bg-gray-100 rounded-lg border space-y-4"
+                          >
+                            {/* Fila 1: Select del objeto */}
+                            <div>
+                              <Label>Objeto</Label>
+                              <Select
+                                value={obj.nombre}
+                                onValueChange={(value) => {
+                                  const seleccionado = objetosDisponibles.find(o => o.nombre === value);
+                                  handleObjetoChange(index, "nombre", value);
+                                  handleObjetoChange(index, "precio", seleccionado?.precio ?? 0);
+                                }}
+                              >
+                                <SelectTrigger>
+                                  <SelectValue placeholder="Selecciona un objeto" />
+                                </SelectTrigger>
+                                <SelectContent>
+                                  {objetosDisponibles.map((o, i) => (
+                                    <SelectItem key={i} value={o.nombre}>
+                                      {o.nombre}
+                                    </SelectItem>
+                                  ))}
+                                </SelectContent>
+                              </Select>
+                            </div>
 
+                            {/* Fila 2: Precio real - Cantidad - Precio unitario - Total */}
+                            <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
 
-                </div>
-                <div>
-                  <Label>Precio real (USD) *</Label>
-                  <Input
-                    name="monto"
-                    type="number"
-                    value={formData.objetoSeleccionado?.precio ?? ""}
-                    required
-                    readOnly
-                  />
-                </div>
-                <div>
-                  <Label>Cantidad</Label>
-                  <Input
-                    type="number"
-                    value={formData.cantidad || 1}
-                    onChange={handleFormChange}
-                    min={1}
-                    required
-                  />
-                </div>
-                <div>
-                  <Label>A cotizar por unidad (USD) *</Label>
-                  <Input
-                    name="monto"
-                    type="number"
-                    value={formData.monto || ""}
-                    onChange={handleFormChange}
-                    placeholder="0.00"
-                    step="0.01"
-                    required
-                  />
-                </div>
-                                <div>
-                  <Label>Total por este objeto(USD) *</Label>
-                  <Input
-                    type="number"
-                    value={(formData.cantidad * formData.monto)}
-                    
-                    required
-                  />
+                              <div>
+                                <Label>Precio real</Label>
+                                <Input type="number" value={obj.precio} readOnly />
+                              </div>
+
+                              <div>
+                                <Label>Cantidad</Label>
+                                <Input
+                                  type="number"
+                                  value={obj.cantidad}
+                                  min={1}
+                                  onChange={(e) =>
+                                    handleObjetoChange(index, "cantidad", e.target.value)
+                                  }
+                                />
+                              </div>
+
+                              <div>
+                                <Label>Precio unitario (USD)</Label>
+                                <Input
+                                  type="number"
+                                  value={obj.monto ?? obj.precio}
+                                  onChange={(e) =>
+                                    handleObjetoChange(index, "monto", e.target.value)
+                                  }
+                                />
+                              </div>
+
+                              <div>
+                                <Label>Total</Label>
+                                <Input
+                                  type="number"
+                                  readOnly
+                                  value={(obj.cantidad ?? 0) * (obj.monto ?? 0)}
+                                />
+                              </div>
+                            </div>
+
+                            {/* Botón eliminar */}
+                            <div className="flex justify-end">
+                              <Button
+                                type="button"
+                                variant="destructive"
+                                className="bg-red-600 hover:bg-red-700"
+                                onClick={() => handleRemoveObjeto(index)}
+                              >
+                                <Trash2 size={16} />
+                              </Button>
+                            </div>
+
+                          </div>
+                        ))}
+
+                      </div>
+
+                  </div>
                 </div>
                 <div>
                   <Label>Validez (días)</Label>
