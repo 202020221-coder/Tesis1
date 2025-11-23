@@ -13,55 +13,8 @@ import {
   DropdownMenuTrigger,
 } from "@/shared/components/ui/dropdown-menu"
 import { Search, Plus, Filter, ChevronDown, MoreVertical } from "lucide-react"
-
-interface Personnel {
-  id: string
-  name: string
-  employeeNo: string
-  role: string
-  position: string
-  area: string
-  status: "active" | "inactive"
-}
-
-const personnelData: Personnel[] = [
-  {
-    id: "P001",
-    name: "AARON BORJA MEDINA",
-    employeeNo: "00011814",
-    role: "AUXILIAR DE PLANEAMIENTO DE LA PRODUCCION",
-    position: "POS-1005620",
-    area: "PLANEAMIENTO PRODUCCION",
-    status: "active",
-  },
-  {
-    id: "P002",
-    name: "ABDON SERGIO CERVANTES RAMIREZ",
-    employeeNo: "00011127",
-    role: "OPERARIO DE PRODUCCION",
-    position: "POS_130548",
-    area: "PLANTA LATEX",
-    status: "active",
-  },
-  {
-    id: "P003",
-    name: "ABEL ANTONIO VILLODAS AGUIRRE",
-    employeeNo: "00004397",
-    role: "OPERADOR DE MONTACARGA",
-    position: "POS_130356",
-    area: "ALMACENES CENTRALES",
-    status: "active",
-  },
-  {
-    id: "P004",
-    name: "ABEL BRAYDEN ESTELA IDROGO",
-    employeeNo: "00011675",
-    role: "PRACTICANTE DE QUIMICOS Y MATERIALES",
-    position: "POS_130656",
-    area: "SSOMA",
-    status: "inactive",
-  },
-]
+import { Personnel, PersonalTableProps } from './types'
+import { personnelDummyData } from '@/dummy-data/personal'
 
 const getInitials = (name: string) => {
   return name
@@ -82,12 +35,8 @@ export function PersonalTable({
   onAdd,
   activeTab,
   setActiveTab,
-}: {
-  onEdit: (id: string) => void
-  onAdd: () => void
-  activeTab: "active" | "inactive"
-  setActiveTab: (tab: "active" | "inactive") => void
-}) {
+  personnelData = personnelDummyData,
+}: PersonalTableProps) {
   const [searchTerm, setSearchTerm] = React.useState("")
   const [selectedRows, setSelectedRows] = React.useState<Set<string>>(new Set())
   const [selectAll, setSelectAll] = React.useState(false)

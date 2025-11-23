@@ -6,32 +6,11 @@ import { Input } from "@/shared/components/ui/input"
 import { Label } from "@/shared/components/ui/label"
 import { Badge } from "@/shared/components/ui/badge"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/shared/components/ui/select"
-import { Search, Plus, Pencil, Trash2, Eye, Download, Filter } from "lucide-react"
+import { Search, Plus, Pencil, Trash2, Eye, Download, Filter, Package } from "lucide-react"
 import { Layout } from '@/shared/layout/Layout'
-interface Cotizacion {
-  id: string
-  numeroRef: string
-  cliente: string
-  fechaEmision: string
-  monto: number
-  objeto: ObjetoItem[] 
-  estado: "pendiente" | "aprobada" | "rechazada" | "enviada" | "vencida"
-  fechaVencimiento: string
-  descripcion: string
-  validez: number
-}
-interface ObjetoItem {
-  nombre: string
-  cantidad: number
-  precio: number
-  monto: number
-}
-interface MenuCotizacionesProps {
-  cotizaciones?: Cotizacion[]
-  onAgregar?: (cotizacion: Cotizacion) => void
-  onEditar?: (id: string, cotizacion: Cotizacion) => void
-  onEliminar?: (id: string) => void
-}
+import { Cotizacion, MenuCotizacionesProps, ObjetoItem } from './Types'
+import { cotizacionesDummy } from '@/dummy-data/cotizaciones'
+import { inventarioDummyData } from '@/dummy-data/inventario'
 
 const estadoConfig = {
   pendiente: { label: "Pendiente", color: "bg-yellow-100 text-yellow-800" },
@@ -42,7 +21,7 @@ const estadoConfig = {
 }
 
 export function MenuCotizaciones({
-  cotizaciones: initialCotizaciones = [],
+  cotizaciones: initialCotizaciones = cotizacionesDummy,
   onAgregar,
   onEditar,
   onEliminar,
@@ -57,66 +36,75 @@ export function MenuCotizaciones({
   const [filtroCliente, setFiltroCliente] = useState("")
   const [detalleId, setDetalleId] = useState<string | null>(null)
 
-const [formData, setFormData] = useState<Partial<Cotizacion>>({
-  numeroRef: "",
-  cliente: "",
-  fechaEmision: new Date().toISOString().split("T")[0],
-  monto: 0,
-  estado: "pendiente",
-  fechaVencimiento: "",
-  descripcion: "",
-  validez: 30,
-  objeto: []   // <<--- aquí vive el listado editable
-});
+  // Obtener items disponibles del inventario
+  const itemsInventarioDisponibles = React.useMemo(() => 
+    inventarioDummyData.filter(item => item.estado === "disponible"),
+    []
+  )
 
-  //dummy que ve los objetos
-const objetosDisponibles = [
-  { nombre: "Laptop Dell", precio: 1200 },
-  { nombre: "Monitor Samsung", precio: 300 },
-  { nombre: "Teclado Mecánico", precio: 90 },
-  { nombre: "Mouse Logitech", precio: 45 },
-  { nombre: "Escritorio Gamer", precio: 250 }
-];
-//aniade una nueva fila
-
-//nuevo objeto
-const handleAddObjeto = () => {
-  setFormData(prev => ({
-    ...prev,
-    objeto: [
-      ...(prev.objeto ?? []),
-      { nombre: "", cantidad: 1, precio: 0, monto: 0 }
-    ]
-  }));
-};
-//modifica una fila
-const handleObjetoChange = (index: number, field: string, value: any) => {
-  setFormData(prev => {
-    const updated = [...(prev.objeto ?? [])];
-    updated[index] = {
-      ...updated[index],
-      [field]: field === "cantidad" || field === "precio" || field === "monto"
-        ? Number(value)
-        : value
-    };
-    return { ...prev, objeto: updated };
+  const [formData, setFormData] = useState<Partial<Cotizacion>>({
+    numeroRef: "",
+    cliente: "",
+    fechaEmision: new Date().toISOString().split("T")[0],
+    monto: 0,
+    estado: "pendiente",
+    fechaVencimiento: "",
+    descripcion: "",
+    validez: 30,
+    objeto: []
   });
-};
-const handleRemoveObjeto = (index: number) => {
-  setFormData(prev => {
-    const updated = [...(prev.objeto ?? [])];
-    updated.splice(index, 1);
-    return { ...prev, objeto: updated };
-  });
-};
 
+  const handleAddObjeto = () => {
+    setFormData(prev => ({
+      ...prev,
+      objeto: [
+        ...(prev.objeto ?? []),
+        { itemId: "", nombre: "", cantidad: 1, precio: 0, monto: 0 }
+      ]
+    }));
+  };
 
+  const handleObjetoChange = (index: number, field: string, value: any) => {
+    setFormData(prev => {
+      const updated = [...(prev.objeto ?? [])];
+      
+      // Si se cambia el item del inventario
+      if (field === "itemId") {
+        const itemSeleccionado = itemsInventarioDisponibles.find(item => item.id === value);
+        if (itemSeleccionado) {
+          updated[index] = {
+            ...updated[index],
+            itemId: value,
+            nombre: itemSeleccionado.nombre,
+            precio: itemSeleccionado.costo_unitario || 0,
+            monto: itemSeleccionado.costo_unitario || 0
+          };
+        }
+      } else {
+        updated[index] = {
+          ...updated[index],
+          [field]: field === "cantidad" || field === "precio" || field === "monto"
+            ? Number(value)
+            : value
+        };
+      }
+      
+      return { ...prev, objeto: updated };
+    });
+  };
+
+  const handleRemoveObjeto = (index: number) => {
+    setFormData(prev => {
+      const updated = [...(prev.objeto ?? [])];
+      updated.splice(index, 1);
+      return { ...prev, objeto: updated };
+    });
+  };
 
   const handleFormChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target
     setFormData((prev) => ({
       ...prev,
-      [name]: name === "cantidad" ? Number(value) : value,
       [name]: name === "monto" || name === "validez" ? Number(value) : value,
     }))
   }
@@ -125,25 +113,43 @@ const handleRemoveObjeto = (index: number) => {
     setFormData((prev) => ({ ...prev, [name]: value }))
   }
 
+  // Calcular monto total de la cotización
+  const calcularMontoTotal = () => {
+    const total = (formData.objeto || []).reduce((sum, obj) => {
+      return sum + (obj.cantidad * obj.monto)
+    }, 0)
+    return total
+  }
+
   const handleSubmitForm = (e: React.FormEvent) => {
     e.preventDefault()
+    
+    const montoTotal = calcularMontoTotal()
+    
     if (editingId) {
-      const updated = cotizaciones.map((c) => (c.id === editingId ? { ...c, ...formData } : c))
+      const updated = cotizaciones.map((c) => 
+        c.id === editingId 
+          ? { ...c, ...formData, monto: montoTotal } 
+          : c
+      )
       setCotizaciones(updated as Cotizacion[])
-      onEditar?.(editingId, { ...cotizaciones.find((c) => c.id === editingId)!, ...formData } as Cotizacion)
+      onEditar?.(editingId, { 
+        ...cotizaciones.find((c) => c.id === editingId)!, 
+        ...formData, 
+        monto: montoTotal 
+      } as Cotizacion)
     } else {
       const newCotizacion: Cotizacion = {
         id: Date.now().toString(),
         numeroRef: formData.numeroRef || "",
         cliente: formData.cliente || "",
         fechaEmision: formData.fechaEmision || "",
-        monto: formData.monto || 0,
+        monto: montoTotal,
         estado: (formData.estado as any) || "pendiente",
         fechaVencimiento: formData.fechaVencimiento || "",
         descripcion: formData.descripcion || "",
         validez: formData.validez || 30,
         objeto: formData.objeto || []
-
       }
       setCotizaciones([...cotizaciones, newCotizacion])
       onAgregar?.(newCotizacion)
@@ -161,7 +167,7 @@ const handleRemoveObjeto = (index: number) => {
       fechaVencimiento: "",
       descripcion: "",
       validez: 30,
-
+      objeto: []
     })
     setShowForm(false)
     setEditingId(null)
@@ -171,11 +177,7 @@ const handleRemoveObjeto = (index: number) => {
   const handleEdit = (id: string) => {
     const cotizacion = cotizaciones.find((c) => c.id === id)
     if (cotizacion) {
-        setFormData({
-    ...cotizacion,
-    objetoSeleccionado: cotizacion.objeto[0] || null,
-    cantidad: cotizacion.objeto[0]?.cantidad || 1
-  })
+      setFormData(cotizacion)
       setEditingId(id)
       setShowForm(true)
       setDetalleId(null)
@@ -210,473 +212,548 @@ const handleRemoveObjeto = (index: number) => {
   const cotizacionDetalle = detalleId ? cotizaciones.find((c) => c.id === detalleId) : null
 
   const handleExportarPDF = (cotizacion: Cotizacion) => {
-    console.log("[v0] Exporting to PDF:", cotizacion)
-    // Placeholder para implementar exportación a PDF
+    console.log("[Exportando PDF]", cotizacion)
     alert(`Exportando cotización ${cotizacion.numeroRef} a PDF...`)
   }
   
   return (
     <Layout className="w-full space-y-6" title="Gestionar Cotizaciones">
       <div className='px-5'>
-         <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
-        <div>
-          <h1 className="text-3xl font-bold text-slate-900 dark:text-white">Gestión de Cotizaciones</h1>
-          <p className="text-slate-600 dark:text-slate-400 mt-1">Total: {cotizacionesFiltradas.length} cotizaciones</p>
+        <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+          <div>
+            <h1 className="text-3xl font-bold text-slate-900 dark:text-white">Gestión de Cotizaciones</h1>
+            <p className="text-slate-600 dark:text-slate-400 mt-1">Total: {cotizacionesFiltradas.length} cotizaciones</p>
+          </div>
+          <Button
+            onClick={() => {
+              setEditingId(null)
+              setShowForm(true)
+              setDetalleId(null)
+            }}
+            className="gap-2 bg-blue-600 hover:bg-blue-700"
+          >
+            <Plus size={20} /> Nueva Cotización
+          </Button>
         </div>
-        <Button
-          onClick={() => {
-            setEditingId(null)
-            setShowForm(true)
-            setDetalleId(null)
-          }}
-          className="gap-2 bg-blue-600 hover:bg-blue-700"
-        >
-          <Plus size={20} /> Nueva Cotización
-        </Button>
-      </div>
 
-      <Card>
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-lg">Buscar y Filtrar</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="relative">
+                <Search className="absolute left-3 top-3 text-slate-400" size={18} />
+                <Input
+                  placeholder="Buscar por número o cliente..."
+                  value={busqueda}
+                  onChange={(e) => setBusqueda(e.target.value)}
+                  className="pl-10"
+                />
+              </div>
+              <Select value={filtroEstado} onValueChange={setFiltroEstado}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Filtrar por estado" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="todos">Todos los estados</SelectItem>
+                  <SelectItem value="pendiente">Pendiente</SelectItem>
+                  <SelectItem value="aprobada">Aprobada</SelectItem>
+                  <SelectItem value="rechazada">Rechazada</SelectItem>
+                  <SelectItem value="enviada">Enviada</SelectItem>
+                  <SelectItem value="vencida">Vencida</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <div>
+                <Label className="text-sm mb-2 block">Fecha de inicio</Label>
+                <Input type="date" value={filtroFechaInicio} onChange={(e) => setFiltroFechaInicio(e.target.value)} />
+              </div>
+              <div>
+                <Label className="text-sm mb-2 block">Fecha de fin</Label>
+                <Input type="date" value={filtroFechaFin} onChange={(e) => setFiltroFechaFin(e.target.value)} />
+              </div>
+              <div>
+                <Label className="text-sm mb-2 block">Cliente</Label>
+                <Input
+                  placeholder="Nombre del cliente..."
+                  value={filtroCliente}
+                  onChange={(e) => setFiltroCliente(e.target.value)}
+                />
+              </div>
+            </div>
+
+            <div className="flex gap-2">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => {
+                  setBusqueda("")
+                  setFiltroEstado("todos")
+                  setFiltroFechaInicio("")
+                  setFiltroFechaFin("")
+                  setFiltroCliente("")
+                }}
+              >
+                <Filter size={16} /> Limpiar Filtros
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
+
+        {showForm && (
+          <Card className="bg-blue-50 dark:bg-blue-950 border-blue-200">
+            <CardHeader>
+              <CardTitle>{editingId ? "Editar" : "Nueva"} Cotización</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <form onSubmit={handleSubmitForm} className="space-y-4">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <Label>Número de Referencia *</Label>
+                    <Input
+                      name="numeroRef"
+                      value={formData.numeroRef || ""}
+                      onChange={handleFormChange}
+                      placeholder="COT-2025-001"
+                      required
+                    />
+                  </div>
+                  <div>
+                    <Label>Cliente *</Label>
+                    <Input
+                      name="cliente"
+                      value={formData.cliente || ""}
+                      onChange={handleFormChange}
+                      placeholder="Nombre del cliente"
+                      required
+                    />
+                  </div>
+                </div>
+
+                <div>
+                  <Label>Descripción *</Label>
+                  <textarea
+                    name="descripcion"
+                    value={formData.descripcion || ""}
+                    onChange={handleFormChange}
+                    placeholder="Descripción detallada del proyecto..."
+                    className="w-full p-2 border rounded-md"
+                    rows={3}
+                    required
+                  />
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+                  <div className="col-span-1 md:col-span-4">
+                    <div className="space-y-4 p-4 bg-white rounded-lg border">
+                      {/* Título y botón agregar */}
+                      <div className="flex justify-between items-center border-b pb-3">
+                        <div className="flex items-center gap-2">
+                          <Package className="w-5 h-5 text-blue-600" />
+                          <Label className="font-semibold text-lg">Items del Inventario a Cotizar</Label>
+                        </div>
+                        <Button
+                          type="button"
+                          onClick={handleAddObjeto}
+                          className="bg-blue-600 hover:bg-blue-700"
+                          size="sm"
+                        >
+                          <Plus size={18} className="mr-2" /> Agregar Item
+                        </Button>
+                      </div>
+
+                      {(formData.objeto ?? []).length === 0 ? (
+                        <p className="text-center text-muted-foreground py-8">
+                          No hay items agregados. Haz clic en "Agregar Item" para comenzar.
+                        </p>
+                      ) : (
+                        (formData.objeto ?? []).map((obj, index) => {
+                          const itemInventario = itemsInventarioDisponibles.find(item => item.id === obj.itemId)
+                          
+                          return (
+                            <div
+                              key={index}
+                              className="p-4 bg-gray-50 rounded-lg border space-y-4"
+                            >
+                              {/* Fila 1: Select del item del inventario */}
+                              <div>
+                                <Label>Item del Inventario *</Label>
+                                <Select
+                                  value={obj.itemId}
+                                  onValueChange={(value) => handleObjetoChange(index, "itemId", value)}
+                                >
+                                  <SelectTrigger>
+                                    <SelectValue placeholder="Selecciona un item del inventario" />
+                                  </SelectTrigger>
+                                  <SelectContent>
+                                    {itemsInventarioDisponibles.map((item) => (
+                                      <SelectItem key={item.id} value={item.id}>
+                                        {item.nombre} ({item.id}) - ${item.costo_unitario?.toFixed(2)}
+                                      </SelectItem>
+                                    ))}
+                                  </SelectContent>
+                                </Select>
+                                {itemInventario && (
+                                  <div className="mt-2 p-2 bg-blue-50 border border-blue-200 rounded text-xs">
+                                    <p><strong>Fabricante:</strong> {itemInventario.fabricante}</p>
+                                    <p><strong>Stock disponible:</strong> {itemInventario.cantidad} unidades</p>
+                                    <p><strong>Categoría:</strong> {itemInventario.categoria || "N/A"}</p>
+                                  </div>
+                                )}
+                              </div>
+
+                              {/* Fila 2: Precio real - Cantidad - Precio cotizado - Total */}
+                              <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+                                <div>
+                                  <Label>Precio Real (Costo)</Label>
+                                  <Input 
+                                    type="number" 
+                                    value={obj.precio} 
+                                    readOnly 
+                                    className="bg-gray-100"
+                                  />
+                                </div>
+
+                                <div>
+                                  <Label>Cantidad *</Label>
+                                  <Input
+                                    type="number"
+                                    value={obj.cantidad}
+                                    min={1}
+                                    max={itemInventario?.cantidad || 999}
+                                    onChange={(e) =>
+                                      handleObjetoChange(index, "cantidad", e.target.value)
+                                    }
+                                    required
+                                  />
+                                  {itemInventario && obj.cantidad > itemInventario.cantidad && (
+                                    <p className="text-xs text-red-600 mt-1">
+                                      Stock insuficiente (disponible: {itemInventario.cantidad})
+                                    </p>
+                                  )}
+                                </div>
+
+                                <div>
+                                  <Label>Precio Cotizado (USD) *</Label>
+                                  <Input
+                                    type="number"
+                                    value={obj.monto}
+                                    min={0}
+                                    step="0.01"
+                                    onChange={(e) =>
+                                      handleObjetoChange(index, "monto", e.target.value)
+                                    }
+                                    required
+                                  />
+                                </div>
+
+                                <div>
+                                  <Label>Subtotal</Label>
+                                  <Input
+                                    type="number"
+                                    readOnly
+                                    value={((obj.cantidad ?? 0) * (obj.monto ?? 0)).toFixed(2)}
+                                    className="bg-gray-100 font-semibold"
+                                  />
+                                </div>
+                              </div>
+
+                              {/* Margen de ganancia */}
+                              {obj.precio > 0 && obj.monto > 0 && (
+                                <div className="p-2 bg-green-50 border border-green-200 rounded text-sm">
+                                  <p className="font-medium text-green-800">
+                                    Margen: ${((obj.monto - obj.precio) * obj.cantidad).toFixed(2)} 
+                                    ({(((obj.monto - obj.precio) / obj.precio) * 100).toFixed(1)}%)
+                                  </p>
+                                </div>
+                              )}
+
+                              {/* Botón eliminar */}
+                              <div className="flex justify-end pt-2 border-t">
+                                <Button
+                                  type="button"
+                                  variant="destructive"
+                                  size="sm"
+                                  onClick={() => handleRemoveObjeto(index)}
+                                >
+                                  <Trash2 size={16} className="mr-2" /> Eliminar Item
+                                </Button>
+                              </div>
+                            </div>
+                          )
+                        })
+                      )}
+
+                      {/* Resumen total */}
+                      {(formData.objeto ?? []).length > 0 && (
+                        <div className="p-4 bg-blue-50 border-2 border-blue-300 rounded-lg mt-4">
+                          <div className="flex justify-between items-center">
+                            <span className="text-lg font-semibold text-blue-900">
+                              Monto Total de la Cotización:
+                            </span>
+                            <span className="text-3xl font-bold text-blue-600">
+                              ${calcularMontoTotal().toFixed(2)}
+                            </span>
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+
+                  <div>
+                    <Label>Validez (días)</Label>
+                    <Input
+                      name="validez"
+                      type="number"
+                      value={formData.validez || 30}
+                      onChange={handleFormChange}
+                      required
+                    />
+                  </div>
+                  <div>
+                    <Label>Fecha de Emisión</Label>
+                    <Input
+                      name="fechaEmision"
+                      type="date"
+                      value={formData.fechaEmision || ""}
+                      onChange={handleFormChange}
+                      required
+                    />
+                  </div>
+                  <div>
+                    <Label>Estado</Label>
+                    <Select
+                      value={formData.estado || "pendiente"}
+                      onValueChange={(value) => handleSelectChange("estado", value)}
+                    >
+                      <SelectTrigger>
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="pendiente">Pendiente</SelectItem>
+                        <SelectItem value="aprobada">Aprobada</SelectItem>
+                        <SelectItem value="rechazada">Rechazada</SelectItem>
+                        <SelectItem value="enviada">Enviada</SelectItem>
+                        <SelectItem value="vencida">Vencida</SelectItem>
+                        </SelectContent>
+                    </Select>
+                  </div>
+                </div>
+                <div>
+              <Label>Fecha de Vencimiento</Label>
+              <Input
+                name="fechaVencimiento"
+                type="date"
+                value={formData.fechaVencimiento || ""}
+                onChange={handleFormChange}
+              />
+            </div>
+            <div className="flex gap-3">
+              <Button type="submit" className="bg-blue-600 hover:bg-blue-700">
+                {editingId ? "Actualizar" : "Crear"} Cotización
+              </Button>
+              <Button type="button" variant="outline" onClick={resetForm}>
+                Cancelar
+              </Button>
+            </div>
+          </form>
+        </CardContent>
+      </Card>
+    )}
+    {cotizacionDetalle && (
+      <Card className="border-l-4 border-l-blue-600">
         <CardHeader>
-          <CardTitle className="text-lg">Buscar y Filtrar</CardTitle>
+          <div className="flex justify-between items-start">
+            <div>
+              <CardTitle>Detalles de Cotización: {cotizacionDetalle.numeroRef}</CardTitle>
+              <CardDescription>Cliente: {cotizacionDetalle.cliente}</CardDescription>
+            </div>
+            <Button variant="ghost" size="sm" onClick={() => setDetalleId(null)}>
+              ✕
+            </Button>
+          </div>
         </CardHeader>
-        <CardContent className="space-y-4">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div className="relative">
-              <Search className="absolute left-3 top-3 text-slate-400" size={18} />
-              <Input
-                placeholder="Buscar por número o cliente..."
-                value={busqueda}
-                onChange={(e) => setBusqueda(e.target.value)}
-                className="pl-10"
-              />
+        <CardContent className="space-y-6">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div>
+              <h3 className="font-semibold text-sm text-slate-600 mb-3">Información General</h3>
+              <div className="space-y-2 text-sm">
+                <div>
+                  <span className="text-slate-500">Número:</span>
+                  <p className="font-medium">{cotizacionDetalle.numeroRef}</p>
+                </div>
+                <div>
+                  <span className="text-slate-500">Cliente:</span>
+                  <p className="font-medium">{cotizacionDetalle.cliente}</p>
+                </div>
+                <div>
+                  <span className="text-slate-500">Fecha de Emisión:</span>
+                  <p className="font-medium">{cotizacionDetalle.fechaEmision}</p>
+                </div>
+                <div>
+                  <span className="text-slate-500">Fecha de Vencimiento:</span>
+                  <p className="font-medium">{cotizacionDetalle.fechaVencimiento || "No especificada"}</p>
+                </div>
+                <div>
+                  <span className="text-slate-500">Estado:</span>
+                  <p className="font-medium">
+                    <Badge className={estadoConfig[cotizacionDetalle.estado]?.color}>
+                      {estadoConfig[cotizacionDetalle.estado]?.label}
+                    </Badge>
+                  </p>
+                </div>
+              </div>
             </div>
-            <Select value={filtroEstado} onValueChange={setFiltroEstado}>
-              <SelectTrigger>
-                <SelectValue placeholder="Filtrar por estado" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="todos">Todos los estados</SelectItem>
-                <SelectItem value="pendiente">Pendiente</SelectItem>
-                <SelectItem value="aprobada">Aprobada</SelectItem>
-                <SelectItem value="rechazada">Rechazada</SelectItem>
-                <SelectItem value="enviada">Enviada</SelectItem>
-                <SelectItem value="vencida">Vencida</SelectItem>
-              </SelectContent>
-            </Select>
+
+            <div>
+              <h3 className="font-semibold text-sm text-slate-600 mb-3">Monto y Validez</h3>
+              <div className="space-y-2 text-sm">
+                <div className="bg-slate-50 p-4 rounded-lg">
+                  <span className="text-slate-500">Monto Total:</span>
+                  <p className="text-2xl font-bold text-blue-600">${cotizacionDetalle.monto.toFixed(2)}</p>
+                </div>
+                <div>
+                  <span className="text-slate-500">Validez:</span>
+                  <p className="font-medium">{cotizacionDetalle.validez} días</p>
+                </div>
+              </div>
+            </div>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <div>
-              <Label className="text-sm mb-2 block">Fecha de inicio</Label>
-              <Input type="date" value={filtroFechaInicio} onChange={(e) => setFiltroFechaInicio(e.target.value)} />
-            </div>
-            <div>
-              <Label className="text-sm mb-2 block">Fecha de fin</Label>
-              <Input type="date" value={filtroFechaFin} onChange={(e) => setFiltroFechaFin(e.target.value)} />
-            </div>
-            <div>
-              <Label className="text-sm mb-2 block">Cliente</Label>
-              <Input
-                placeholder="Nombre del cliente..."
-                value={filtroCliente}
-                onChange={(e) => setFiltroCliente(e.target.value)}
-              />
+          <div>
+            <h3 className="font-semibold text-sm text-slate-600 mb-3">Descripción</h3>
+            <p className="text-sm text-slate-700 bg-slate-50 p-4 rounded-lg">{cotizacionDetalle.descripcion}</p>
+          </div>
+
+          {/* Detalle de Items */}
+          <div>
+            <h3 className="font-semibold text-sm text-slate-600 mb-3">Items Cotizados ({cotizacionDetalle.objeto.length})</h3>
+            <div className="space-y-2">
+              {cotizacionDetalle.objeto.map((item, index) => {
+                const itemInventario = inventarioDummyData.find(inv => inv.id === item.itemId)
+                return (
+                  <div key={index} className="p-3 bg-slate-50 rounded-lg border">
+                    <div className="flex justify-between items-start">
+                      <div className="flex-1">
+                        <p className="font-medium text-slate-900">{item.nombre}</p>
+                        {itemInventario && (
+                          <p className="text-xs text-slate-500">
+                            {itemInventario.fabricante} - ID: {item.itemId}
+                          </p>
+                        )}
+                      </div>
+                      <div className="text-right">
+                        <p className="font-semibold text-slate-900">
+                          ${(item.cantidad * item.monto).toFixed(2)}
+                        </p>
+                        <p className="text-xs text-slate-500">
+                          {item.cantidad} × ${item.monto.toFixed(2)}
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                )
+              })}
             </div>
           </div>
 
-          <div className="flex gap-2">
+          <div className="flex gap-2 pt-4 border-t">
+            <Button size="sm" variant="outline" onClick={() => handleEdit(cotizacionDetalle.id)}>
+              <Pencil size={16} className="mr-2" /> Editar
+            </Button>
+            <Button size="sm" variant="outline" onClick={() => handleExportarPDF(cotizacionDetalle)}>
+              <Download size={16} className="mr-2" /> Exportar PDF
+            </Button>
             <Button
-              variant="outline"
               size="sm"
+              variant="destructive"
               onClick={() => {
-                setBusqueda("")
-                setFiltroEstado("todos")
-                setFiltroFechaInicio("")
-                setFiltroFechaFin("")
-                setFiltroCliente("")
+                handleDelete(cotizacionDetalle.id)
+                setDetalleId(null)
               }}
             >
-              <Filter size={16} /> Limpiar Filtros
+              <Trash2 size={16} className="mr-2" /> Eliminar
             </Button>
           </div>
         </CardContent>
       </Card>
+    )}
 
-      {showForm && (
-        <Card className="bg-blue-50 dark:bg-blue-950 border-blue-200">
-          <CardHeader>
-            <CardTitle>{editingId ? "Editar" : "Nueva"} Cotización</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <form onSubmit={handleSubmitForm} className="space-y-4">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div>
-                  <Label>Número de Referencia *</Label>
-                  <Input
-                    name="numeroRef"
-                    value={formData.numeroRef || ""}
-                    onChange={handleFormChange}
-                    placeholder="COT-2025-001"
-                    required
-                  />
-                </div>
-                <div>
-                  <Label>Cliente *</Label>
-                  <Input
-                    name="cliente"
-                    value={formData.cliente || ""}
-                    onChange={handleFormChange}
-                    placeholder="Nombre del cliente"
-                    required
-                  />
-                </div>
-              </div>
-
-              <div>
-                <Label>Descripción *</Label>
-                <textarea
-                  name="descripcion"
-                  value={formData.descripcion || ""}
-                  onChange={handleFormChange}
-                  placeholder="Descripción detallada del proyecto..."
-                  className="w-full p-2 border rounded-md"
-                  rows={3}
-                  required
-                />
-              </div>
-
-              <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-                 <div className="col-span-1 md:col-span-4">
-                  <div className="flex flex-col md:flex-row items-center gap-4 p-4 bg-gray-100 rounded-lg border">
-                    <div className="col-span-1 md:col-span-4 space-y-4">
-
-                        {/* Título y botón agregar */}
-                        <div className="flex justify-between items-center">
-                          <Label className="font-semibold">Objetos a cotizar</Label>
-
-                          <Button
-                            type="button"
-                            onClick={handleAddObjeto}
-                            className="bg-blue-600 hover:bg-blue-700"
-                          >
-                            <Plus size={18} />
-                          </Button>
-                        </div>
-
-                        {/* Listado vertical de objetos */}
-                        {(formData.objeto ?? []).map((obj, index) => (
-                          <div
-                            key={index}
-                            className="p-4 bg-gray-100 rounded-lg border space-y-4"
-                          >
-                            {/* Fila 1: Select del objeto */}
-                            <div>
-                              <Label>Objeto</Label>
-                              <Select
-                                value={obj.nombre}
-                                onValueChange={(value) => {
-                                  const seleccionado = objetosDisponibles.find(o => o.nombre === value);
-                                  handleObjetoChange(index, "nombre", value);
-                                  handleObjetoChange(index, "precio", seleccionado?.precio ?? 0);
-                                }}
-                              >
-                                <SelectTrigger>
-                                  <SelectValue placeholder="Selecciona un objeto" />
-                                </SelectTrigger>
-                                <SelectContent>
-                                  {objetosDisponibles.map((o, i) => (
-                                    <SelectItem key={i} value={o.nombre}>
-                                      {o.nombre}
-                                    </SelectItem>
-                                  ))}
-                                </SelectContent>
-                              </Select>
-                            </div>
-
-                            {/* Fila 2: Precio real - Cantidad - Precio unitario - Total */}
-                            <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-
-                              <div>
-                                <Label>Precio real</Label>
-                                <Input type="number" value={obj.precio} readOnly />
-                              </div>
-
-                              <div>
-                                <Label>Cantidad</Label>
-                                <Input
-                                  type="number"
-                                  value={obj.cantidad}
-                                  min={1}
-                                  onChange={(e) =>
-                                    handleObjetoChange(index, "cantidad", e.target.value)
-                                  }
-                                />
-                              </div>
-
-                              <div>
-                                <Label>Precio unitario (USD)</Label>
-                                <Input
-                                  type="number"
-                                  value={obj.monto ?? obj.precio}
-                                  onChange={(e) =>
-                                    handleObjetoChange(index, "monto", e.target.value)
-                                  }
-                                />
-                              </div>
-
-                              <div>
-                                <Label>Total</Label>
-                                <Input
-                                  type="number"
-                                  readOnly
-                                  value={(obj.cantidad ?? 0) * (obj.monto ?? 0)}
-                                />
-                              </div>
-                            </div>
-
-                            {/* Botón eliminar */}
-                            <div className="flex justify-end">
-                              <Button
-                                type="button"
-                                variant="destructive"
-                                className="bg-red-600 hover:bg-red-700"
-                                onClick={() => handleRemoveObjeto(index)}
-                              >
-                                <Trash2 size={16} />
-                              </Button>
-                            </div>
-
-                          </div>
-                        ))}
-
-                      </div>
-
-                  </div>
-                </div>
-                <div>
-                  <Label>Validez (días)</Label>
-                  <Input
-                    name="validez"
-                    type="number"
-                    value={formData.validez || 30}
-                    onChange={handleFormChange}
-                    required
-                  />
-                </div>
-                <div>
-                  <Label>Fecha de Emisión</Label>
-                  <Input
-                    name="fechaEmision"
-                    type="date"
-                    value={formData.fechaEmision || ""}
-                    onChange={handleFormChange}
-                    required
-                  />
-                </div>
-                <div>
-                  <Label>Estado</Label>
-                  <Select
-                    value={formData.estado || "pendiente"}
-                    onValueChange={(value) => handleSelectChange("estado", value)}
-                  >
-                    <SelectTrigger>
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="pendiente">Pendiente</SelectItem>
-                      <SelectItem value="aprobada">Aprobada</SelectItem>
-                      <SelectItem value="rechazada">Rechazada</SelectItem>
-                      <SelectItem value="enviada">Enviada</SelectItem>
-                      <SelectItem value="vencida">Vencida</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-              </div>
-
-              <div>
-                <Label>Fecha de Vencimiento</Label>
-                <Input
-                  name="fechaVencimiento"
-                  type="date"
-                  value={formData.fechaVencimiento || ""}
-                  onChange={handleFormChange}
-                />
-              </div>
-
-              <div className="flex gap-3">
-                <Button type="submit" className="bg-blue-600 hover:bg-blue-700">
-                  {editingId ? "Actualizar" : "Crear"} Cotización
-                </Button>
-                <Button type="button" variant="outline" onClick={resetForm}>
-                  Cancelar
-                </Button>
-              </div>
-            </form>
+    <div className="space-y-3">
+      {cotizacionesFiltradas.length === 0 ? (
+        <Card>
+          <CardContent className="py-12 text-center">
+            <p className="text-slate-500">
+              {cotizaciones.length === 0
+                ? "No hay cotizaciones creadas"
+                : "No hay cotizaciones que coincidan con los filtros"}
+            </p>
           </CardContent>
         </Card>
-      )}
-
-      {cotizacionDetalle && (
-        <Card className="border-l-4 border-l-blue-600">
-          <CardHeader>
-            <div className="flex justify-between items-start">
-              <div>
-                <CardTitle>Detalles de Cotización: {cotizacionDetalle.numeroRef}</CardTitle>
-                <CardDescription>Cliente: {cotizacionDetalle.cliente}</CardDescription>
-              </div>
-              <Button variant="ghost" size="sm" onClick={() => setDetalleId(null)}>
-                ✕
-              </Button>
-            </div>
-          </CardHeader>
-          <CardContent className="space-y-6">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              <div>
-                <h3 className="font-semibold text-sm text-slate-600 mb-3">Información General</h3>
-                <div className="space-y-2 text-sm">
-                  <div>
-                    <span className="text-slate-500">Número:</span>
-                    <p className="font-medium">{cotizacionDetalle.numeroRef}</p>
-                  </div>
-                  <div>
-                    <span className="text-slate-500">Cliente:</span>
-                    <p className="font-medium">{cotizacionDetalle.cliente}</p>
-                  </div>
-                  <div>
-                    <span className="text-slate-500">Fecha de Emisión:</span>
-                    <p className="font-medium">{cotizacionDetalle.fechaEmision}</p>
-                  </div>
-                  <div>
-                    <span className="text-slate-500">Fecha de Vencimiento:</span>
-                    <p className="font-medium">{cotizacionDetalle.fechaVencimiento || "No especificada"}</p>
-                  </div>
-                  <div>
-                    <span className="text-slate-500">Estado:</span>
-                    <p className="font-medium">
-                      <Badge className={estadoConfig[cotizacionDetalle.estado]?.color}>
-                        {estadoConfig[cotizacionDetalle.estado]?.label}
-                      </Badge>
-                    </p>
-                  </div>
-                </div>
-              </div>
-
-              <div>
-                <h3 className="font-semibold text-sm text-slate-600 mb-3">Monto y Validez</h3>
-                <div className="space-y-2 text-sm">
-                  <div className="bg-slate-50 p-4 rounded-lg">
-                    <span className="text-slate-500">Monto Total:</span>
-                    <p className="text-2xl font-bold text-blue-600">${cotizacionDetalle.monto.toFixed(2)}</p>
-                  </div>
-                  <div>
-                    <span className="text-slate-500">Validez:</span>
-                    <p className="font-medium">{cotizacionDetalle.validez} días</p>
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            <div>
-              <h3 className="font-semibold text-sm text-slate-600 mb-3">Descripción</h3>
-              <p className="text-sm text-slate-700 bg-slate-50 p-4 rounded-lg">{cotizacionDetalle.descripcion}</p>
-            </div>
-
-            <div className="flex gap-2 pt-4 border-t">
-              <Button size="sm" variant="outline" onClick={() => handleEdit(cotizacionDetalle.id)}>
-                <Pencil size={16} className="mr-2" /> Editar
-              </Button>
-              <Button size="sm" variant="outline" onClick={() => handleExportarPDF(cotizacionDetalle)}>
-                <Download size={16} className="mr-2" /> Exportar PDF
-              </Button>
-              <Button
-                size="sm"
-                variant="destructive"
-                onClick={() => {
-                  handleDelete(cotizacionDetalle.id)
-                  setDetalleId(null)
-                }}
-              >
-                <Trash2 size={16} className="mr-2" /> Eliminar
-              </Button>
-            </div>
-          </CardContent>
-        </Card>
-      )}
-
-      <div className="space-y-3">
-        {cotizacionesFiltradas.length === 0 ? (
-          <Card>
-            <CardContent className="py-12 text-center">
-              <p className="text-slate-500">
-                {cotizaciones.length === 0
-                  ? "No hay cotizaciones creadas"
-                  : "No hay cotizaciones que coincidan con los filtros"}
-              </p>
-            </CardContent>
-          </Card>
-        ) : (
-          <div className="overflow-x-auto">
-            <table className="w-full text-sm">
-              <thead>
-                <tr className="border-b bg-slate-50 dark:bg-slate-900">
-                  <th className="px-4 py-3 text-left font-semibold">Número</th>
-                  <th className="px-4 py-3 text-left font-semibold">Cliente</th>
-                  <th className="px-4 py-3 text-left font-semibold">Fecha Emisión</th>
-                  <th className="px-4 py-3 text-right font-semibold">Monto</th>
-                  <th className="px-4 py-3 text-left font-semibold">Estado</th>
-                  <th className="px-4 py-3 text-left font-semibold">Vencimiento</th>
-                  <th className="px-4 py-3 text-center font-semibold">Acciones</th>
+      ) : (
+        <div className="overflow-x-auto">
+          <table className="w-full text-sm">
+            <thead>
+              <tr className="border-b bg-slate-50 dark:bg-slate-900">
+                <th className="px-4 py-3 text-left font-semibold">Número</th>
+                <th className="px-4 py-3 text-left font-semibold">Cliente</th>
+                <th className="px-4 py-3 text-left font-semibold">Fecha Emisión</th>
+                <th className="px-4 py-3 text-right font-semibold">Monto</th>
+                <th className="px-4 py-3 text-left font-semibold">Estado</th>
+                <th className="px-4 py-3 text-left font-semibold">Vencimiento</th>
+                <th className="px-4 py-3 text-center font-semibold">Acciones</th>
+              </tr>
+            </thead>
+            <tbody>
+              {cotizacionesFiltradas.map((cotizacion) => (
+                <tr key={cotizacion.id} className="border-b hover:bg-slate-50 dark:hover:bg-slate-900">
+                  <td className="px-4 py-3 font-medium text-blue-600">{cotizacion.numeroRef}</td>
+                  <td className="px-4 py-3">{cotizacion.cliente}</td>
+                  <td className="px-4 py-3">{cotizacion.fechaEmision}</td>
+                  <td className="px-4 py-3 text-right font-semibold text-slate-900">
+                    ${cotizacion.monto.toFixed(2)}
+                  </td>
+                  <td className="px-4 py-3">
+                    <Badge className={estadoConfig[cotizacion.estado]?.color}>
+                      {estadoConfig[cotizacion.estado]?.label}
+                    </Badge>
+                  </td>
+                  <td className="px-4 py-3 text-slate-600">{cotizacion.fechaVencimiento || "-"}</td>
+                  <td className="px-4 py-3">
+                    <div className="flex gap-2 justify-center">
+                      <Button
+                        size="sm"
+                        variant="ghost"
+                        onClick={() => handleVerDetalle(cotizacion.id)}
+                        title="Ver detalles"
+                      >
+                        <Eye size={16} />
+                      </Button>
+                      <Button size="sm" variant="ghost" onClick={() => handleEdit(cotizacion.id)} title="Editar">
+                        <Pencil size={16} />
+                      </Button>
+                      <Button
+                        size="sm"
+                        variant="ghost"
+                        className="text-red-600 hover:text-red-700"
+                        onClick={() => handleDelete(cotizacion.id)}
+                        title="Eliminar"
+                      >
+                        <Trash2 size={16} />
+                      </Button>
+                    </div>
+                  </td>
                 </tr>
-              </thead>
-              <tbody>
-                {cotizacionesFiltradas.map((cotizacion) => (
-                  <tr key={cotizacion.id} className="border-b hover:bg-slate-50 dark:hover:bg-slate-900">
-                    <td className="px-4 py-3 font-medium text-blue-600">{cotizacion.numeroRef}</td>
-                    <td className="px-4 py-3">{cotizacion.cliente}</td>
-                    <td className="px-4 py-3">{cotizacion.fechaEmision}</td>
-                    <td className="px-4 py-3 text-right font-semibold text-slate-900">
-                      ${cotizacion.monto.toFixed(2)}
-                    </td>
-                    <td className="px-4 py-3">
-                      <Badge className={estadoConfig[cotizacion.estado]?.color}>
-                        {estadoConfig[cotizacion.estado]?.label}
-                      </Badge>
-                    </td>
-                    <td className="px-4 py-3 text-slate-600">{cotizacion.fechaVencimiento || "-"}</td>
-                    <td className="px-4 py-3">
-                      <div className="flex gap-2 justify-center">
-                        <Button
-                          size="sm"
-                          variant="ghost"
-                          onClick={() => handleVerDetalle(cotizacion.id)}
-                          title="Ver detalles"
-                        >
-                          <Eye size={16} />
-                        </Button>
-                        <Button size="sm" variant="ghost" onClick={() => handleEdit(cotizacion.id)} title="Editar">
-                          <Pencil size={16} />
-                        </Button>
-                        <Button
-                          size="sm"
-                          variant="ghost"
-                          className="text-red-600 hover:text-red-700"
-                          onClick={() => handleDelete(cotizacion.id)}
-                          title="Eliminar"
-                        >
-                          <Trash2 size={16} />
-                        </Button>
-                      </div>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        )}
-      </div>
-
-      </div>
-    </Layout>
-  )
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
+    </div>
+  </div>
+</Layout>
+)
 }
-
