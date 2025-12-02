@@ -25,3 +25,61 @@ export interface MenuCotizacionesProps {
   onEditar?: (id: string, cotizacion: Cotizacion) => void;
   onEliminar?: (id: string) => void;
 }
+
+export interface Cliente {
+  ruc: string; // PK - RUC de 11 dígitos
+  razonSocial: string;
+  ubicacion: string;
+  contacto: string; // Puede ser teléfono o email
+  nombreContacto: string;
+  plataformaFacturacion?: string; // URL de la plataforma
+  usuarioPlataforma?: string;
+  contrasenaPlataforma?: string;
+  comentarios?: string;
+  fechaRegistro?: string;
+  estado?: "activo" | "inactivo" | "suspendido";
+  tipoCliente?: "corporativo" | "gobierno" | "pyme" | "individual";
+  limiteCredito?: number;
+  proyectosAsociados?: string[]; // IDs de proyectos
+}
+
+export interface MenuClientesProps {
+  clientes?: Cliente[];
+  onAgregar?: (cliente: Cliente) => void;
+  onEditar?: (ruc: string, cliente: Cliente) => void;
+  onEliminar?: (ruc: string) => void;
+}
+
+export interface InventarioProyecto {
+  id_objeto: string; // FK del inventario
+  nombreObjeto?: string; // Para mostrar en la UI
+  cantidad: number;
+  origen?: "cotizacion" | "adicional"; // Para distinguir de dónde viene
+}
+
+export interface Proyecto {
+  id: string; // PK
+  cotizacion?: string; // FK opcional - ID de la cotización
+  camiones: string[]; // FK array - IDs de los camiones asignados
+  inventario_proyecto: InventarioProyecto[];
+  cliente: string; // FK obligatorio - RUC del cliente
+  informe_final?: File | string; // PDF opcional
+  factura?: File | string; // PDF opcional
+  comentarios?: string;
+  ubicacion: string;
+  servicio_brindado: string;
+  fecha_inicio: string;
+  fecha_finalizacion?: string;
+  estado?: "planificacion" | "en_curso" | "completado" | "cancelado" | "pausado";
+  monto_total?: number;
+  fechaCreacion?: string;
+}
+
+export interface MenuProyectosProps {
+  proyectos?: Proyecto[];
+  onAgregar?: (proyecto: Proyecto) => void;
+  onEditar?: (id: string, proyecto: Proyecto) => void;
+  onEliminar?: (id: string) => void;
+}
+
+//nuevo
