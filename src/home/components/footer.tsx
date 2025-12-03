@@ -20,11 +20,11 @@ export default function Footer() {
 
           {/* Services */}
           <div>
-            <h4 className="font-bold mb-4">Servicios</h4>
+            <h4 className="font-bold mb-4">Atajos a la intranet</h4>
             <ul className="space-y-2 text-sm text-secondary-foreground/80">
-              <li><a href="#" className="hover:text-primary transition-colors">Inspecciones</a></li>
-              <li><a href="#" className="hover:text-primary transition-colors">Instalaciones</a></li>
-              <li><a href="#" className="hover:text-primary transition-colors">Capacitación</a></li>
+              <li><a href="directorio" className="hover:text-primary transition-colors">Directorio</a></li>
+              <li><a href="procesos" className="hover:text-primary transition-colors">Procesos</a></li>
+              <li><a href="inventario" className="hover:text-primary transition-colors">Inventario</a></li>
               <li><a href="#" className="hover:text-primary transition-colors">Mantenimiento</a></li>
             </ul>
           </div>

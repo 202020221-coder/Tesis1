@@ -14,6 +14,12 @@ export interface ISubMenu {
 }
 
 export const sidebarLinks: IMenu[] = [
+      {
+    title: 'ir al landing page',
+    roles: [],
+    url: '/'
+    
+  },
   {
     title: 'Gestion de Personal',
     roles: [],
@@ -21,10 +27,11 @@ export const sidebarLinks: IMenu[] = [
       {
         title: 'Directorio',
         roles: [],
-        url: '/'
+        url: '/directorio'
       },
     ]
   },
+
    {
     title: 'Procesos',
     roles: [],
