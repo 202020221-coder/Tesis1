@@ -25,15 +25,8 @@ const dashboardItems = [
     icon: Package,
     color: "from-purple-600 to-purple-700",
     count: 0,
-  },
-  {
-    title: "Análisis",
-    description: "Ver reportes y estadísticas",
-    href: "/procesos/analisis",
-    icon: TrendingUp,
-    color: "from-green-600 to-green-700",
-    count: 0,
-  },
+  }
+
 ]
 
 export function Menu() {
