@@ -5,14 +5,25 @@ export interface ObjetoItem {
   precio: number; // Precio real del item del inventario
   monto: number; // Precio que se cotiza al cliente
 }
+export interface ServicioItem {
+  objectId: string; // Cambiado de nombre a itemId para referenciar items del inventario
+  nombre: string; // Se mantiene para mostrar en la UI
+  descripcion: string; // igualmente mantiene para mostrar en la UI
+  precio: number; // Precio real del item mostrado del dummy-data
+  monto: number; // Precio que se cotiza al cliente
+  comentario: string; // comentario respecto al servicio
+}
 
 export interface Cotizacion {
   id: string;
   numeroRef: string;
+  idsolicitud: string;
   cliente: string;
+  ruc: number;
   fechaEmision: string;
   monto: number;
   objeto: ObjetoItem[];
+  servicios: ServicioItem[];
   estado: "pendiente" | "aprobada" | "rechazada" | "enviada" | "vencida";
   fechaVencimiento: string;
   descripcion: string;
