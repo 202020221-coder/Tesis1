@@ -62,6 +62,7 @@ export interface Proyecto {
   cotizacion?: string; // FK opcional - ID de la cotización
   camiones: string[]; // FK array - IDs de los camiones asignados
   inventario_proyecto: InventarioProyecto[];
+  personal_asignado: PersonalAsignado[]; // Array de personal asignado al proyecto
   cliente: string; // FK obligatorio - RUC del cliente
   informe_final?: File | string; // PDF opcional
   factura?: File | string; // PDF opcional
@@ -74,7 +75,6 @@ export interface Proyecto {
   monto_total?: number;
   fechaCreacion?: string;
 }
-
 export interface MenuProyectosProps {
   proyectos?: Proyecto[];
   onAgregar?: (proyecto: Proyecto) => void;
@@ -83,3 +83,11 @@ export interface MenuProyectosProps {
 }
 
 //nuevo
+export interface PersonalAsignado {
+  personalId: string; // FK - ID del personal (P001, P002, etc.)
+  nombrePersonal?: string; // Para mostrar en la UI
+  role: string; // Rol en el proyecto
+  startDate: string;
+  endDate?: string;
+  dedicationPercentage: number; // Porcentaje de dedicación (0-100)
+}
