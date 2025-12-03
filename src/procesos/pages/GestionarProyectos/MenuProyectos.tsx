@@ -14,6 +14,7 @@ import { cotizacionesDummy } from '@/dummy-data/cotizaciones'
 import { camionesDummyData } from '@/dummy-data/camiones'
 import { inventarioDummyData } from '@/dummy-data/inventario'
 import { clientesDummyData } from '@/dummy-data/clientes'
+import { personnelDummyData } from '@/dummy-data/personal'
 
 const estadoConfig = {
   planificacion: { label: "Planificación", color: "bg-yellow-100 text-yellow-800" },
@@ -194,7 +195,8 @@ export function MenuProyectos({
         fecha_finalizacion: formData.fecha_finalizacion,
         estado: (formData.estado as any) || "planificacion",
         monto_total: formData.monto_total || 0,
-        fechaCreacion: formData.fechaCreacion
+        fechaCreacion: formData.fechaCreacion,
+        personal_asignado: formData.personal_asignado || []
       }
       setProyectos([...proyectos, newProyecto])
       onAgregar?.(newProyecto)
@@ -208,6 +210,7 @@ export function MenuProyectos({
       cotizacion: undefined,
       camiones: [],
       inventario_proyecto: [],
+      personal_asignado: [], // Agregar esta línea
       cliente: "",
       informe_final: undefined,
       factura: undefined,
@@ -546,7 +549,177 @@ export function MenuProyectos({
                     ))}
                   </div>
                 </div>
+                {/* Sección: Personal Asignado */}
+                <div className="space-y-4">
+                  <div className="flex justify-between items-center border-b pb-2">
+                    <h3 className="font-semibold text-lg flex items-center gap-2">
+                      <Users className="w-5 h-5" />
+                      Personal Asignado ({(formData.personal_asignado || []).length})
+                    </h3>
+                    <Button
+                      type="button"
+                      onClick={() => {
+                        setFormData(prev => ({
+                          ...prev,
+                          personal_asignado: [
+                            ...(prev.personal_asignado || []),
+                            {
+                              personalId: "",
+                              nombrePersonal: "",
+                              role: "",
+                              startDate: formData.fecha_inicio || "",
+                              dedicationPercentage: 100
+                            }
+                          ]
+                        }))
+                      }}
+                      variant="outline"
+                      size="sm"
+                    >
+                      <Plus size={16} className="mr-2" /> Asignar Personal
+                    </Button>
+                  </div>
 
+                  {(formData.personal_asignado || []).length === 0 ? (
+                    <p className="text-center text-muted-foreground py-8">
+                      No hay personal asignado al proyecto. Haz clic en "Asignar Personal" para comenzar.
+                    </p>
+                  ) : (
+                    <div className="space-y-3">
+                      {(formData.personal_asignado || []).map((personal, index) => {
+                        const personalData = personnelDummyData.find(p => p.id === personal.personalId)
+                        
+                        return (
+                          <div
+                            key={index}
+                            className="p-4 bg-slate-50 rounded-lg border space-y-3"
+                          >
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                              <div className="md:col-span-2">
+                                <Label>Personal *</Label>
+                                <Select
+                                  value={personal.personalId}
+                                  onValueChange={(value) => {
+                                    const selected = personnelDummyData.find(p => p.id === value)
+                                    setFormData(prev => {
+                                      const updated = [...(prev.personal_asignado || [])]
+                                      updated[index] = {
+                                        ...updated[index],
+                                        personalId: value,
+                                        nombrePersonal: selected?.name || ""
+                                      }
+                                      return { ...prev, personal_asignado: updated }
+                                    })
+                                  }}
+                                >
+                                  <SelectTrigger>
+                                    <SelectValue placeholder="Selecciona personal" />
+                                  </SelectTrigger>
+                                  <SelectContent>
+                                    {personnelDummyData.filter(p => p.status === "active").map(p => (
+                                      <SelectItem key={p.id} value={p.id}>
+                                        {p.name} - {p.role}
+                                      </SelectItem>
+                                    ))}
+                                  </SelectContent>
+                                </Select>
+                                {personalData && (
+                                  <p className="text-xs text-slate-500 mt-1">
+                                    {personalData.role} - {personalData.area}
+                                  </p>
+                                )}
+                              </div>
+
+                              <div>
+                                <Label>Rol en el Proyecto *</Label>
+                                <Input
+                                  value={personal.role}
+                                  onChange={(e) => {
+                                    setFormData(prev => {
+                                      const updated = [...(prev.personal_asignado || [])]
+                                      updated[index] = { ...updated[index], role: e.target.value }
+                                      return { ...prev, personal_asignado: updated }
+                                    })
+                                  }}
+                                  placeholder="Ej: Supervisor de Proyecto"
+                                  required
+                                />
+                              </div>
+
+                              <div>
+                                <Label>% Dedicación (0-100) *</Label>
+                                <Input
+                                  type="number"
+                                  min="1"
+                                  max="100"
+                                  value={personal.dedicationPercentage}
+                                  onChange={(e) => {
+                                    setFormData(prev => {
+                                      const updated = [...(prev.personal_asignado || [])]
+                                      updated[index] = { 
+                                        ...updated[index], 
+                                        dedicationPercentage: Number(e.target.value) 
+                                      }
+                                      return { ...prev, personal_asignado: updated }
+                                    })
+                                  }}
+                                  required
+                                />
+                              </div>
+
+                              <div>
+                                <Label>Fecha de Inicio *</Label>
+                                <Input
+                                  type="date"
+                                  value={personal.startDate}
+                                  onChange={(e) => {
+                                    setFormData(prev => {
+                                      const updated = [...(prev.personal_asignado || [])]
+                                      updated[index] = { ...updated[index], startDate: e.target.value }
+                                      return { ...prev, personal_asignado: updated }
+                                    })
+                                  }}
+                                  required
+                                />
+                              </div>
+
+                              <div>
+                                <Label>Fecha de Fin (Opcional)</Label>
+                                <Input
+                                  type="date"
+                                  value={personal.endDate || ""}
+                                  onChange={(e) => {
+                                    setFormData(prev => {
+                                      const updated = [...(prev.personal_asignado || [])]
+                                      updated[index] = { ...updated[index], endDate: e.target.value || undefined }
+                                      return { ...prev, personal_asignado: updated }
+                                    })
+                                  }}
+                                />
+                              </div>
+                            </div>
+
+                            <div className="flex justify-end pt-2 border-t">
+                              <Button
+                                type="button"
+                                variant="destructive"
+                                size="sm"
+                                onClick={() => {
+                                  setFormData(prev => ({
+                                    ...prev,
+                                    personal_asignado: (prev.personal_asignado || []).filter((_, i) => i !== index)
+                                  }))
+                                }}
+                              >
+                                <Trash2 size={14} className="mr-2" /> Eliminar
+                              </Button>
+                            </div>
+                          </div>
+                        )
+                      })}
+                    </div>
+                  )}
+                </div>
                 {/* Sección: Inventario del Proyecto */}
                 <div className="space-y-4">
                   <div className="flex justify-between items-center border-b pb-2">
@@ -825,7 +998,40 @@ export function MenuProyectos({
                   </div>
                 </div>
               )}
-
+              {/* Personal Asignado */}
+              {proyectoDetalle.personal_asignado && proyectoDetalle.personal_asignado.length > 0 && (
+                <div>
+                  <h3 className="font-semibold text-sm text-slate-600 mb-3 flex items-center gap-2">
+                    <Users className="w-4 h-4" />
+                    Personal Asignado ({proyectoDetalle.personal_asignado.length})
+                  </h3>
+                  <div className="space-y-2">
+                    {proyectoDetalle.personal_asignado.map((personal, index) => {
+                      const personalData = personnelDummyData.find(p => p.id === personal.personalId)
+                      return (
+                        <div key={index} className="p-3 bg-slate-50 rounded-lg border">
+                        <div className="flex justify-between items-start">
+                        <div className="flex-1">
+                        <p className="font-medium">
+                        {personal.nombrePersonal || personalData?.name || "Personal no encontrado"}
+                        </p>
+                        <p className="text-xs text-slate-500 mt-1">
+                        {personal.role} - {personal.dedicationPercentage}% dedicación
+                        </p>
+                        <p className="text-xs text-slate-500">
+                        {personal.startDate} {personal.endDate ?  "${personal.endDate}" : "(En curso)"}
+                        </p>
+                        </div>
+                        <Badge className="bg-blue-100 text-blue-800">
+                        ID: {personal.personalId}
+                        </Badge>
+                        </div>
+                        </div>
+                        )
+                        })}
+                        </div>
+                        </div>
+                        )}
               {/* Inventario del Proyecto */}
               {proyectoDetalle.inventario_proyecto.length > 0 && (
                 <div>

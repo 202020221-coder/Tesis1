@@ -5,14 +5,25 @@ export interface ObjetoItem {
   precio: number; // Precio real del item del inventario
   monto: number; // Precio que se cotiza al cliente
 }
+export interface ServicioItem {
+  objectId: string; // Cambiado de nombre a itemId para referenciar items del inventario
+  nombre: string; // Se mantiene para mostrar en la UI
+  descripcion: string; // igualmente mantiene para mostrar en la UI
+  precio: number; // Precio real del item mostrado del dummy-data
+  monto: number; // Precio que se cotiza al cliente
+  comentario: string; // comentario respecto al servicio
+}
 
 export interface Cotizacion {
   id: string;
   numeroRef: string;
+  idsolicitud: string;
   cliente: string;
+  ruc: number;
   fechaEmision: string;
   monto: number;
   objeto: ObjetoItem[];
+  servicios: ServicioItem[];
   estado: "pendiente" | "aprobada" | "rechazada" | "enviada" | "vencida";
   fechaVencimiento: string;
   descripcion: string;
@@ -62,6 +73,7 @@ export interface Proyecto {
   cotizacion?: string; // FK opcional - ID de la cotización
   camiones: string[]; // FK array - IDs de los camiones asignados
   inventario_proyecto: InventarioProyecto[];
+  personal_asignado: PersonalAsignado[]; // Array de personal asignado al proyecto
   cliente: string; // FK obligatorio - RUC del cliente
   informe_final?: File | string; // PDF opcional
   factura?: File | string; // PDF opcional
@@ -74,7 +86,6 @@ export interface Proyecto {
   monto_total?: number;
   fechaCreacion?: string;
 }
-
 export interface MenuProyectosProps {
   proyectos?: Proyecto[];
   onAgregar?: (proyecto: Proyecto) => void;
@@ -83,3 +94,11 @@ export interface MenuProyectosProps {
 }
 
 //nuevo
+export interface PersonalAsignado {
+  personalId: string; // FK - ID del personal (P001, P002, etc.)
+  nombrePersonal?: string; // Para mostrar en la UI
+  role: string; // Rol en el proyecto
+  startDate: string;
+  endDate?: string;
+  dedicationPercentage: number; // Porcentaje de dedicación (0-100)
+}

@@ -1,3 +1,4 @@
+//cambio
 import React from 'react'
 import { useState } from "react"
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/shared/components/ui/card"
@@ -6,11 +7,13 @@ import { Input } from "@/shared/components/ui/input"
 import { Label } from "@/shared/components/ui/label"
 import { Badge } from "@/shared/components/ui/badge"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/shared/components/ui/select"
-import { Search, Plus, Pencil, Trash2, Eye, Download, Filter, Package } from "lucide-react"
+import { Search, Plus, Pencil, Trash2, Eye, Download, Filter, Package, Briefcase, CheckCircle } from "lucide-react"
 import { Layout } from '@/shared/layout/Layout'
-import { Cotizacion, MenuCotizacionesProps, ObjetoItem } from './Types'
+import { Cotizacion, MenuCotizacionesProps, ServicioItem } from './Types'
 import { cotizacionesDummy } from '@/dummy-data/cotizaciones'
 import { inventarioDummyData } from '@/dummy-data/inventario'
+import { serviciosDummy } from '@/dummy-data/servicio'
+import { solicitudesDeServicioDummy } from '@/dummy-data/solicitud-de-servicios'
 
 const estadoConfig = {
   pendiente: { label: "Pendiente", color: "bg-yellow-100 text-yellow-800" },
@@ -18,6 +21,13 @@ const estadoConfig = {
   rechazada: { label: "Rechazada", color: "bg-red-100 text-red-800" },
   enviada: { label: "Enviada", color: "bg-blue-100 text-blue-800" },
   vencida: { label: "Vencida", color: "bg-gray-100 text-gray-800" },
+}
+
+const estadoSolicitudConfig = {
+  pendiente: { label: "Pendiente", color: "bg-yellow-100 text-yellow-800" },
+  "en-proceso": { label: "En Proceso", color: "bg-blue-100 text-blue-800" },
+  completada: { label: "Completada", color: "bg-green-100 text-green-800" },
+  cancelada: { label: "Cancelada", color: "bg-red-100 text-red-800" },
 }
 
 export function MenuCotizaciones({
@@ -35,6 +45,7 @@ export function MenuCotizaciones({
   const [filtroFechaFin, setFiltroFechaFin] = useState("")
   const [filtroCliente, setFiltroCliente] = useState("")
   const [detalleId, setDetalleId] = useState<string | null>(null)
+  const [solicitudSeleccionada, setSolicitudSeleccionada] = useState<string | null>(null)
 
   // Obtener items disponibles del inventario
   const itemsInventarioDisponibles = React.useMemo(() => 
@@ -42,17 +53,80 @@ export function MenuCotizaciones({
     []
   )
 
+  // Obtener solicitudes pendientes o canceladas
+  const solicitudesDisponibles = React.useMemo(() =>
+    solicitudesDeServicioDummy.filter(sol => sol.estado === "pendiente" || sol.estado === "cancelada"),
+    []
+  )
+
   const [formData, setFormData] = useState<Partial<Cotizacion>>({
     numeroRef: "",
+    idsolicitud: "",
     cliente: "",
+    ruc: 0,
     fechaEmision: new Date().toISOString().split("T")[0],
     monto: 0,
     estado: "pendiente",
     fechaVencimiento: "",
     descripcion: "",
     validez: 30,
-    objeto: []
+    objeto: [],
+    servicios: []
   });
+
+  // Cargar datos desde solicitud de servicio
+  const handleSolicitudChange = (solicitudId: string) => {
+    if (!solicitudId || solicitudId === "ninguna") {
+      setSolicitudSeleccionada(null)
+      return
+    }
+
+    const solicitud = solicitudesDeServicioDummy.find(s => s.id === solicitudId)
+    if (!solicitud) return
+
+    setSolicitudSeleccionada(solicitudId)
+
+    // Procesar productos (inventario) - contar repeticiones
+    const productosContados: Record<string, number> = {}
+    solicitud.productId.forEach(prodId => {
+      productosContados[prodId] = (productosContados[prodId] || 0) + 1
+    })
+
+    const inventarioDeSolicitud = Object.entries(productosContados).map(([itemId, cantidad]) => {
+      const item = inventarioDummyData.find(inv => inv.id === itemId)
+      return {
+        itemId: itemId,
+        nombre: item?.nombre || "",
+        cantidad: cantidad,
+        precio: item?.costo_unitario || 0,
+        monto: item?.costo_unitario || 0
+      }
+    })
+
+    // Procesar servicios (sin cantidad, cada servicio una sola vez)
+    const serviciosUnicos = [...new Set(solicitud.serviceId)]
+    const serviciosDeSolicitud: ServicioItem[] = serviciosUnicos.map(serviceId => {
+      const servicio = serviciosDummy.find(s => s.id === serviceId)
+      return {
+        objectId: String(serviceId),
+        nombre: servicio?.name || "",
+        descripcion: servicio?.description || "",
+        precio: servicio?.price || 0,
+        monto: servicio?.price || 0,
+        comentario: ""
+      }
+    })
+
+    setFormData(prev => ({
+      ...prev,
+      idsolicitud: solicitudId,
+      cliente: solicitud.companyName,
+      ruc: Number(solicitud.ruc),
+      descripcion: solicitud.description,
+      objeto: inventarioDeSolicitud,
+      servicios: serviciosDeSolicitud
+    }))
+  }
 
   const handleAddObjeto = () => {
     setFormData(prev => ({
@@ -101,11 +175,57 @@ export function MenuCotizaciones({
     });
   };
 
+  // Gestión de servicios
+  const handleAddServicio = () => {
+    setFormData(prev => ({
+      ...prev,
+      servicios: [
+        ...(prev.servicios ?? []),
+        { objectId: "", nombre: "", descripcion: "", precio: 0, monto: 0, comentario: "" }
+      ]
+    }));
+  };
+
+  const handleServicioChange = (index: number, field: string, value: any) => {
+    setFormData(prev => {
+      const updated = [...(prev.servicios ?? [])];
+      
+      if (field === "objectId") {
+        const servicioSeleccionado = serviciosDummy.find(s => String(s.id) === value);
+        if (servicioSeleccionado) {
+          updated[index] = {
+            ...updated[index],
+            objectId: value,
+            nombre: servicioSeleccionado.name,
+            descripcion: servicioSeleccionado.description,
+            precio: servicioSeleccionado.price,
+            monto: servicioSeleccionado.price
+          };
+        }
+      } else {
+        updated[index] = {
+          ...updated[index],
+          [field]: field === "precio" || field === "monto" ? Number(value) : value
+        };
+      }
+      
+      return { ...prev, servicios: updated };
+    });
+  };
+
+  const handleRemoveServicio = (index: number) => {
+    setFormData(prev => {
+      const updated = [...(prev.servicios ?? [])];
+      updated.splice(index, 1);
+      return { ...prev, servicios: updated };
+    });
+  };
+
   const handleFormChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target
     setFormData((prev) => ({
       ...prev,
-      [name]: name === "monto" || name === "validez" ? Number(value) : value,
+      [name]: name === "monto" || name === "validez" || name === "ruc" ? Number(value) : value,
     }))
   }
 
@@ -115,10 +235,15 @@ export function MenuCotizaciones({
 
   // Calcular monto total de la cotización
   const calcularMontoTotal = () => {
-    const total = (formData.objeto || []).reduce((sum, obj) => {
+    const totalObjetos = (formData.objeto || []).reduce((sum, obj) => {
       return sum + (obj.cantidad * obj.monto)
     }, 0)
-    return total
+    
+    const totalServicios = (formData.servicios || []).reduce((sum, serv) => {
+      return sum + serv.monto
+    }, 0)
+    
+    return totalObjetos + totalServicios
   }
 
   const handleSubmitForm = (e: React.FormEvent) => {
@@ -142,14 +267,17 @@ export function MenuCotizaciones({
       const newCotizacion: Cotizacion = {
         id: Date.now().toString(),
         numeroRef: formData.numeroRef || "",
+        idsolicitud: formData.idsolicitud || "",
         cliente: formData.cliente || "",
+        ruc: formData.ruc || 0,
         fechaEmision: formData.fechaEmision || "",
         monto: montoTotal,
         estado: (formData.estado as any) || "pendiente",
         fechaVencimiento: formData.fechaVencimiento || "",
         descripcion: formData.descripcion || "",
         validez: formData.validez || 30,
-        objeto: formData.objeto || []
+        objeto: formData.objeto || [],
+        servicios: formData.servicios || []
       }
       setCotizaciones([...cotizaciones, newCotizacion])
       onAgregar?.(newCotizacion)
@@ -160,18 +288,22 @@ export function MenuCotizaciones({
   const resetForm = () => {
     setFormData({
       numeroRef: "",
+      idsolicitud: "",
       cliente: "",
+      ruc: 0,
       fechaEmision: new Date().toISOString().split("T")[0],
       monto: 0,
       estado: "pendiente",
       fechaVencimiento: "",
       descripcion: "",
       validez: 30,
-      objeto: []
+      objeto: [],
+      servicios: []
     })
     setShowForm(false)
     setEditingId(null)
     setDetalleId(null)
+    setSolicitudSeleccionada(null)
   }
 
   const handleEdit = (id: string) => {
@@ -309,8 +441,67 @@ export function MenuCotizaciones({
               <CardTitle>{editingId ? "Editar" : "Nueva"} Cotización</CardTitle>
             </CardHeader>
             <CardContent>
-              <form onSubmit={handleSubmitForm} className="space-y-4">
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <form onSubmit={handleSubmitForm} className="space-y-6">
+                {/* Tabla de Solicitudes de Servicio */}
+                <div className="space-y-4">
+                  <h3 className="font-semibold text-lg border-b pb-2 flex items-center gap-2">
+                    <CheckCircle className="w-5 h-5" />
+                    Seleccionar Solicitud de Servicio (Opcional)
+                  </h3>
+                  
+                  <div className="overflow-x-auto border rounded-lg">
+                    <table className="w-full text-sm">
+                      <thead>
+                        <tr className="border-b bg-slate-100">
+                          <th className="px-4 py-2 text-left">Seleccionar</th>
+                          <th className="px-4 py-2 text-left">ID Solicitud</th>
+                          <th className="px-4 py-2 text-left">RUC</th>
+                          <th className="px-4 py-2 text-left">Email</th>
+                          <th className="px-4 py-2 text-left">Estado</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {solicitudesDisponibles.map((solicitud) => (
+                          <tr 
+                            key={solicitud.id} 
+                            className={`border-b hover:bg-slate-50 cursor-pointer ${
+                              solicitudSeleccionada === solicitud.id ? "bg-blue-100" : ""
+                            }`}
+                            onClick={() => handleSolicitudChange(solicitud.id)}
+                          >
+                            <td className="px-4 py-2">
+                              <input
+                                type="radio"
+                                checked={solicitudSeleccionada === solicitud.id}
+                                onChange={() => handleSolicitudChange(solicitud.id)}
+                                className="w-4 h-4"
+                              />
+                            </td>
+                            <td className="px-4 py-2 font-medium">{solicitud.id}</td>
+                            <td className="px-4 py-2">{solicitud.ruc}</td>
+                            <td className="px-4 py-2">{solicitud.email}</td>
+                            <td className="px-4 py-2">
+                              <Badge className={estadoSolicitudConfig[solicitud.estado]?.color}>
+                                {estadoSolicitudConfig[solicitud.estado]?.label}
+                              </Badge>
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+
+                  {solicitudSeleccionada && (
+                    <div className="p-3 bg-green-50 border border-green-200 rounded-lg">
+                      <p className="text-sm text-green-900">
+                        ✓ Solicitud seleccionada. Los productos y servicios se han cargado automáticamente.
+                      </p>
+                    </div>
+                  )}
+                </div>
+
+                {/* Información Básica */}
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                   <div>
                     <Label>Número de Referencia *</Label>
                     <Input
@@ -331,6 +522,17 @@ export function MenuCotizaciones({
                       required
                     />
                   </div>
+                  <div>
+                    <Label>RUC *</Label>
+                    <Input
+                      name="ruc"
+                      type="number"
+                      value={formData.ruc || ""}
+                      onChange={handleFormChange}
+                      placeholder="20123456789"
+                      required
+                    />
+                  </div>
                 </div>
 
                 <div>
@@ -346,211 +548,330 @@ export function MenuCotizaciones({
                   />
                 </div>
 
-                <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-                  <div className="col-span-1 md:col-span-4">
-                    <div className="space-y-4 p-4 bg-white rounded-lg border">
-                      {/* Título y botón agregar */}
-                      <div className="flex justify-between items-center border-b pb-3">
-                        <div className="flex items-center gap-2">
-                          <Package className="w-5 h-5 text-blue-600" />
-                          <Label className="font-semibold text-lg">Items del Inventario a Cotizar</Label>
-                        </div>
-                        <Button
-                          type="button"
-                          onClick={handleAddObjeto}
-                          className="bg-blue-600 hover:bg-blue-700"
-                          size="sm"
+                {/* Items del Inventario */}
+                <div className="space-y-4 p-4 bg-white rounded-lg border">
+                  <div className="flex justify-between items-center border-b pb-3">
+                    <div className="flex items-center gap-2">
+                      <Package className="w-5 h-5 text-blue-600" />
+                      <Label className="font-semibold text-lg">Items del Inventario a Cotizar</Label>
+                    </div>
+                    <Button
+                      type="button"
+                      onClick={handleAddObjeto}
+                      className="bg-blue-600 hover:bg-blue-700"
+                      size="sm"
+                    >
+                      <Plus size={18} className="mr-2" /> Agregar Item
+                    </Button>
+                  </div>
+
+                  {(formData.objeto ?? []).length === 0 ? (
+                    <p className="text-center text-muted-foreground py-8">
+                      No hay items agregados. Haz clic en "Agregar Item" para comenzar.
+                    </p>
+                  ) : (
+                    (formData.objeto ?? []).map((obj, index) => {
+                      const itemInventario = itemsInventarioDisponibles.find(item => item.id === obj.itemId)
+                      
+                      return (
+                        <div
+                          key={index}
+                          className="p-4 bg-gray-50 rounded-lg border space-y-4"
                         >
-                          <Plus size={18} className="mr-2" /> Agregar Item
-                        </Button>
-                      </div>
-
-                      {(formData.objeto ?? []).length === 0 ? (
-                        <p className="text-center text-muted-foreground py-8">
-                          No hay items agregados. Haz clic en "Agregar Item" para comenzar.
-                        </p>
-                      ) : (
-                        (formData.objeto ?? []).map((obj, index) => {
-                          const itemInventario = itemsInventarioDisponibles.find(item => item.id === obj.itemId)
-                          
-                          return (
-                            <div
-                              key={index}
-                              className="p-4 bg-gray-50 rounded-lg border space-y-4"
+                          <div>
+                            <Label>Item del Inventario *</Label>
+                            <Select
+                              value={obj.itemId}
+                              onValueChange={(value) => handleObjetoChange(index, "itemId", value)}
                             >
-                              {/* Fila 1: Select del item del inventario */}
-                              <div>
-                                <Label>Item del Inventario *</Label>
-                                <Select
-                                  value={obj.itemId}
-                                  onValueChange={(value) => handleObjetoChange(index, "itemId", value)}
-                                >
-                                  <SelectTrigger>
-                                    <SelectValue placeholder="Selecciona un item del inventario" />
-                                  </SelectTrigger>
-                                  <SelectContent>
-                                    {itemsInventarioDisponibles.map((item) => (
-                                      <SelectItem key={item.id} value={item.id}>
-                                        {item.nombre} ({item.id}) - ${item.costo_unitario?.toFixed(2)}
-                                      </SelectItem>
-                                    ))}
-                                  </SelectContent>
-                                </Select>
-                                {itemInventario && (
-                                  <div className="mt-2 p-2 bg-blue-50 border border-blue-200 rounded text-xs">
-                                    <p><strong>Fabricante:</strong> {itemInventario.fabricante}</p>
-                                    <p><strong>Stock disponible:</strong> {itemInventario.cantidad} unidades</p>
-                                    <p><strong>Categoría:</strong> {itemInventario.categoria || "N/A"}</p>
-                                  </div>
-                                )}
+                              <SelectTrigger>
+                                <SelectValue placeholder="Selecciona un item del inventario" />
+                              </SelectTrigger>
+                              <SelectContent>
+                                {itemsInventarioDisponibles.map((item) => (
+                                  <SelectItem key={item.id} value={item.id}>
+                                    {item.nombre} ({item.id}) - ${item.costo_unitario?.toFixed(2)}
+                                  </SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
+                            {itemInventario && (
+                              <div className="mt-2 p-2 bg-blue-50 border border-blue-200 rounded text-xs">
+                                <p><strong>Fabricante:</strong> {itemInventario.fabricante}</p>
+                                <p><strong>Stock disponible:</strong> {itemInventario.cantidad} unidades</p>
+                                <p><strong>Categoría:</strong> {itemInventario.categoria || "N/A"}</p>
                               </div>
+                            )}
+                          </div>
 
-                              {/* Fila 2: Precio real - Cantidad - Precio cotizado - Total */}
-                              <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-                                <div>
-                                  <Label>Precio Real (Costo)</Label>
-                                  <Input 
-                                    type="number" 
-                                    value={obj.precio} 
-                                    readOnly 
-                                    className="bg-gray-100"
-                                  />
-                                </div>
-
-                                <div>
-                                  <Label>Cantidad *</Label>
-                                  <Input
-                                    type="number"
-                                    value={obj.cantidad}
-                                    min={1}
-                                    max={itemInventario?.cantidad || 999}
-                                    onChange={(e) =>
-                                      handleObjetoChange(index, "cantidad", e.target.value)
-                                    }
-                                    required
-                                  />
-                                  {itemInventario && obj.cantidad > itemInventario.cantidad && (
-                                    <p className="text-xs text-red-600 mt-1">
-                                      Stock insuficiente (disponible: {itemInventario.cantidad})
-                                    </p>
-                                  )}
-                                </div>
-
-                                <div>
-                                  <Label>Precio Cotizado (USD) *</Label>
-                                  <Input
-                                    type="number"
-                                    value={obj.monto}
-                                    min={0}
-                                    step="0.01"
-                                    onChange={(e) =>
-                                      handleObjetoChange(index, "monto", e.target.value)
-                                    }
-                                    required
-                                  />
-                                </div>
-
-                                <div>
-                                  <Label>Subtotal</Label>
-                                  <Input
-                                    type="number"
-                                    readOnly
-                                    value={((obj.cantidad ?? 0) * (obj.monto ?? 0)).toFixed(2)}
-                                    className="bg-gray-100 font-semibold"
-                                  />
-                                </div>
-                              </div>
-
-                              {/* Margen de ganancia */}
-                              {obj.precio > 0 && obj.monto > 0 && (
-                                <div className="p-2 bg-green-50 border border-green-200 rounded text-sm">
-                                  <p className="font-medium text-green-800">
-                                    Margen: ${((obj.monto - obj.precio) * obj.cantidad).toFixed(2)} 
-                                    ({(((obj.monto - obj.precio) / obj.precio) * 100).toFixed(1)}%)
-                                  </p>
-                                </div>
-                              )}
-
-                              {/* Botón eliminar */}
-                              <div className="flex justify-end pt-2 border-t">
-                                <Button
-                                  type="button"
-                                  variant="destructive"
-                                  size="sm"
-                                  onClick={() => handleRemoveObjeto(index)}
-                                >
-                                  <Trash2 size={16} className="mr-2" /> Eliminar Item
-                                </Button>
-                              </div>
+                          <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+                            <div>
+                              <Label>Precio Real (Costo)</Label>
+                              <Input 
+                                type="number" 
+                                value={obj.precio} 
+                                readOnly 
+                                className="bg-gray-100"
+                              />
                             </div>
-                          )
-                        })
-                      )}
 
-                      {/* Resumen total */}
-                      {(formData.objeto ?? []).length > 0 && (
-                        <div className="p-4 bg-blue-50 border-2 border-blue-300 rounded-lg mt-4">
-                          <div className="flex justify-between items-center">
-                            <span className="text-lg font-semibold text-blue-900">
-                              Monto Total de la Cotización:
-                            </span>
-                            <span className="text-3xl font-bold text-blue-600">
-                              ${calcularMontoTotal().toFixed(2)}
-                            </span>
+                            <div>
+                              <Label>Cantidad *</Label>
+                              <Input
+                                type="number"
+                                value={obj.cantidad}
+                                min={1}
+                                max={itemInventario?.cantidad || 999}
+                                onChange={(e) =>
+                                  handleObjetoChange(index, "cantidad", e.target.value)
+                                }
+                                required
+                              />
+                              {itemInventario && obj.cantidad > itemInventario.cantidad && (
+                                <p className="text-xs text-red-600 mt-1">
+                                  Stock insuficiente (disponible: {itemInventario.cantidad})
+                                </p>
+                              )}
+                            </div>
+
+                            <div>
+                              <Label>Precio Cotizado (USD) *</Label>
+                              <Input
+                                type="number"
+                                value={obj.monto}
+                                min={0}
+                                step="0.01"
+                                onChange={(e) =>
+                                  handleObjetoChange(index, "monto", e.target.value)
+                                }
+                                required
+                              />
+                            </div>
+
+                            <div>
+                              <Label>Subtotal</Label>
+                              <Input
+                                type="number"
+                                readOnly
+                                value={((obj.cantidad ?? 0) * (obj.monto ?? 0)).toFixed(2)}
+                                className="bg-gray-100 font-semibold"
+                              />
+                            </div>
+                          </div>
+
+                          {obj.precio > 0 && obj.monto > 0 && (
+                            <div className="p-2 bg-green-50 border border-green-200 rounded text-sm">
+                              <p className="font-medium text-green-800">
+                                Margen: ${((obj.monto - obj.precio) * obj.cantidad).toFixed(2)} 
+                                ({(((obj.monto - obj.precio) / obj.precio) * 100).toFixed(1)}%)
+                              </p>
+                            </div>
+                          )}
+
+                          <div className="flex justify-end pt-2 border-t">
+                            <Button
+                              type="button"
+                              variant="destructive"
+                              size="sm"
+                              onClick={() => handleRemoveObjeto(index)}
+                            >
+                              <Trash2 size={16} className="mr-2" /> Eliminar Item
+                            </Button>
                           </div>
                         </div>
-                      )}
+                      )
+                    })
+                  )}
+                </div>
+
+                {/* Servicios Cotizados */}
+                <div className="space-y-4 p-4 bg-white rounded-lg border">
+                  <div className="flex justify-between items-center border-b pb-3">
+                    <div className="flex items-center gap-2">
+                      <Briefcase className="w-5 h-5 text-purple-600" />
+                      <Label className="font-semibold text-lg">Servicios Pedidos a Cotizar</Label>
                     </div>
+                    <Button
+                      type="button"
+                      onClick={handleAddServicio}
+                      className="bg-purple-600 hover:bg-purple-700"
+                      size="sm"
+                    >
+                      <Plus size={18} className="mr-2" /> Agregar Servicio
+                    </Button>
                   </div>
 
-                  <div>
-                    <Label>Validez (días)</Label>
-                    <Input
-                      name="validez"
-                      type="number"
-                      value={formData.validez || 30}
-                      onChange={handleFormChange}
-                      required
-                    />
-                  </div>
-                  <div>
-                    <Label>Fecha de Emisión</Label>
-                    <Input
-                      name="fechaEmision"
-                      type="date"
-                      value={formData.fechaEmision || ""}
-                      onChange={handleFormChange}
-                      required
-                    />
-                  </div>
-                  <div>
-                    <Label>Estado</Label>
-                    <Select
-                      value={formData.estado || "pendiente"}
-                      onValueChange={(value) => handleSelectChange("estado", value)}
-                    >
-                      <SelectTrigger>
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="pendiente">Pendiente</SelectItem>
-                        <SelectItem value="aprobada">Aprobada</SelectItem>
-                        <SelectItem value="rechazada">Rechazada</SelectItem>
-                        <SelectItem value="enviada">Enviada</SelectItem>
-                        <SelectItem value="vencida">Vencida</SelectItem>
-                        </SelectContent>
-                    </Select>
-                  </div>
-                </div>
-                <div>
-              <Label>Fecha de Vencimiento</Label>
-              <Input
-                name="fechaVencimiento"
-                type="date"
-                value={formData.fechaVencimiento || ""}
-                onChange={handleFormChange}
-              />
+                  {(formData.servicios ?? []).length === 0 ? (
+                    <p className="text-center text-muted-foreground py-8">
+                      No hay servicios agregados. Haz clic en "Agregar Servicio" para comenzar.
+                    </p>
+                  ) : (
+                    (formData.servicios ?? []).map((serv, index) => {
+                      const servicioData = serviciosDummy.find(s => String(s.id) === serv.objectId)
+                      
+                      return (
+                        <div
+                          key={index}
+                          className="p-4 bg-purple-50 rounded-lg border space-y-4"
+                        >
+                          <div>
+                            <Label>Servicio *</Label>
+                            <Select
+                              value={serv.objectId}
+                              onValueChange={(value) => handleServicioChange(index, "objectId", value)}
+                            >
+                              <SelectTrigger>
+                                <SelectValue placeholder="Selecciona un servicio" />
+                              </SelectTrigger>
+                              <SelectContent>
+                                {serviciosDummy.map((servicio) => (
+                                  <SelectItem key={servicio.id} value={String(servicio.id)}>
+                                    {servicio.name} - ${servicio.price}
+                                  </SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
+                            {servicioData && (
+                              <div className="mt-2 p-2 bg-purple-100 border border-purple-200 rounded text-xs">
+                            <p><strong>Descripción:</strong> {servicioData.description}</p>
+                          </div>
+                        )}
+                      </div>
+
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div>
+                          <Label>Precio Real</Label>
+                          <Input 
+                            type="number" 
+                            value={serv.precio} 
+                            readOnly 
+                            className="bg-gray-100"
+                          />
+                        </div>
+
+                        <div>
+                          <Label>Precio Cotizado (USD) *</Label>
+                          <Input
+                            type="number"
+                            value={serv.monto}
+                            min={0}
+                            step="0.01"
+                            onChange={(e) =>
+                              handleServicioChange(index, "monto", e.target.value)
+                            }
+                            required
+                          />
+                        </div>
+                      </div>
+
+                      <div>
+                        <Label>Comentario</Label>
+                        <textarea
+                          value={serv.comentario}
+                          onChange={(e) =>
+                            handleServicioChange(index, "comentario", e.target.value)
+                          }
+                          placeholder="Comentarios o especificaciones del servicio..."
+                          className="w-full p-2 border rounded-md"
+                          rows={2}
+                        />
+                      </div>
+
+                      {serv.precio > 0 && serv.monto > 0 && (
+                        <div className="p-2 bg-green-50 border border-green-200 rounded text-sm">
+                          <p className="font-medium text-green-800">
+                            Margen: ${(serv.monto - serv.precio).toFixed(2)} 
+                            ({(((serv.monto - serv.precio) / serv.precio) * 100).toFixed(1)}%)
+                          </p>
+                        </div>
+                      )}
+
+                      <div className="flex justify-end pt-2 border-t">
+                        <Button
+                          type="button"
+                          variant="destructive"
+                          size="sm"
+                          onClick={() => handleRemoveServicio(index)}
+                        >
+                          <Trash2 size={16} className="mr-2" /> Eliminar Servicio
+                        </Button>
+                      </div>
+                    </div>
+                  )
+                })
+              )}
             </div>
+
+            {/* Resumen total */}
+            {((formData.objeto ?? []).length > 0 || (formData.servicios ?? []).length > 0) && (
+              <div className="p-4 bg-blue-50 border-2 border-blue-300 rounded-lg">
+                <div className="flex justify-between items-center">
+                  <div>
+                    <span className="text-lg font-semibold text-blue-900">
+                      Monto Total de la Cotización:
+                    </span>
+                    <p className="text-xs text-blue-700 mt-1">
+                      Productos: ${(formData.objeto || []).reduce((sum, obj) => sum + (obj.cantidad * obj.monto), 0).toFixed(2)} + 
+                      Servicios: ${(formData.servicios || []).reduce((sum, serv) => sum + serv.monto, 0).toFixed(2)}
+                    </p>
+                  </div>
+                  <span className="text-3xl font-bold text-blue-600">
+                    ${calcularMontoTotal().toFixed(2)}
+                  </span>
+                </div>
+              </div>
+            )}
+
+            <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+              <div>
+                <Label>Validez (días)</Label>
+                <Input
+                  name="validez"
+                  type="number"
+                  value={formData.validez || 30}
+                  onChange={handleFormChange}
+                  required
+                />
+              </div>
+              <div>
+                <Label>Fecha de Emisión</Label>
+                <Input
+                  name="fechaEmision"
+                  type="date"
+                  value={formData.fechaEmision || ""}
+                  onChange={handleFormChange}
+                  required
+                />
+              </div>
+              <div>
+                <Label>Estado</Label>
+                <Select
+                  value={formData.estado || "pendiente"}
+                  onValueChange={(value) => handleSelectChange("estado", value)}
+                >
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="pendiente">Pendiente</SelectItem>
+                    <SelectItem value="aprobada">Aprobada</SelectItem>
+                    <SelectItem value="rechazada">Rechazada</SelectItem>
+                    <SelectItem value="enviada">Enviada</SelectItem>
+                    <SelectItem value="vencida">Vencida</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div>
+                <Label>Fecha de Vencimiento</Label>
+                <Input
+                  name="fechaVencimiento"
+                  type="date"
+                  value={formData.fechaVencimiento || ""}
+                  onChange={handleFormChange}
+                />
+              </div>
+            </div>
+
             <div className="flex gap-3">
               <Button type="submit" className="bg-blue-600 hover:bg-blue-700">
                 {editingId ? "Actualizar" : "Crear"} Cotización
@@ -563,6 +884,7 @@ export function MenuCotizaciones({
         </CardContent>
       </Card>
     )}
+
     {cotizacionDetalle && (
       <Card className="border-l-4 border-l-blue-600">
         <CardHeader>

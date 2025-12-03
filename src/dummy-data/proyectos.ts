@@ -3,7 +3,7 @@ import { Proyecto } from '@/procesos/pages/GestionarProyectos/Types';
 export const proyectosDummyData: Proyecto[] = [
   {
     id: "PROJ-001",
-    cotizacion: "1", // Cotización aprobada de Tech Solutions
+    cotizacion: "1",
     camiones: ["C001", "C003"],
     inventario_proyecto: [
       { id_objeto: "I001", nombreObjeto: "Extintor CO2 10lb", cantidad: 2, origen: "cotizacion" },
@@ -11,7 +11,25 @@ export const proyectosDummyData: Proyecto[] = [
       { id_objeto: "I007", nombreObjeto: "Hacha de Bombero Plana", cantidad: 5, origen: "cotizacion" },
       { id_objeto: "I010", nombreObjeto: "Radio Portátil VHF", cantidad: 2, origen: "adicional" }
     ],
-    cliente: "20123456789", // Tech Solutions S.A.C.
+    personal_asignado: [
+      {
+        personalId: "P001",
+        nombrePersonal: "AARON BORJA MEDINA",
+        role: "Coordinador de Planeamiento",
+        startDate: "2025-02-01",
+        endDate: "2025-02-15",
+        dedicationPercentage: 80
+      },
+      {
+        personalId: "P010",
+        nombrePersonal: "ANDERSON JAVIER LOPEZ DIAZ",
+        role: "Ingeniero de Procesos",
+        startDate: "2025-02-01",
+        endDate: "2025-02-15",
+        dedicationPercentage: 60
+      }
+    ],
+    cliente: "20123456789",
     informe_final: "informe_proj001.pdf",
     factura: "factura_proj001.pdf",
     comentarios: "Proyecto de instalación de sistema contra incendios en edificio corporativo. Cliente muy satisfecho con el servicio.",
@@ -25,14 +43,30 @@ export const proyectosDummyData: Proyecto[] = [
   },
   {
     id: "PROJ-002",
-    cotizacion: "6", // Cotización aprobada de Universidad Nacional
+    cotizacion: "6",
     camiones: ["C005"],
     inventario_proyecto: [
       { id_objeto: "I001", nombreObjeto: "Extintor CO2 10lb", cantidad: 15, origen: "cotizacion" },
       { id_objeto: "I009", nombreObjeto: "Linterna LED Alta Potencia", cantidad: 20, origen: "cotizacion" },
       { id_objeto: "I023", nombreObjeto: "Cono de Tráfico Reflectivo", cantidad: 50, origen: "adicional" }
     ],
-    cliente: "20890123456", // Universidad Nacional del Centro
+    personal_asignado: [
+      {
+        personalId: "P005",
+        nombrePersonal: "ADRIANA LUCIA TORRES MENDOZA",
+        role: "Jefe de Proyecto",
+        startDate: "2025-02-20",
+        dedicationPercentage: 100
+      },
+      {
+        personalId: "P016",
+        nombrePersonal: "ANTONIO JOSE HERRERA ORTIZ",
+        role: "Técnico de Instalación",
+        startDate: "2025-02-20",
+        dedicationPercentage: 100
+      }
+    ],
+    cliente: "20890123456",
     factura: "factura_proj002.pdf",
     comentarios: "Implementación de equipos de seguridad en campus universitario. Incluye capacitación al personal de seguridad.",
     ubicacion: "Av. Universitaria 456, Huancayo",
@@ -51,7 +85,25 @@ export const proyectosDummyData: Proyecto[] = [
       { id_objeto: "I008", nombreObjeto: "Cámara Térmica TIC", cantidad: 1, origen: "adicional" },
       { id_objeto: "I016", nombreObjeto: "Detector de Gas Multigas", cantidad: 3, origen: "adicional" }
     ],
-    cliente: "20345678901", // Corporación Minera del Sur
+    personal_asignado: [
+      {
+        personalId: "P002",
+        nombrePersonal: "ABDON SERGIO CERVANTES RAMIREZ",
+        role: "Operario Principal",
+        startDate: "2025-01-15",
+        endDate: "2025-01-30",
+        dedicationPercentage: 100
+      },
+      {
+        personalId: "P006",
+        nombrePersonal: "ALBERTO CARLOS MENDEZ RIOS",
+        role: "Supervisor de Calidad",
+        startDate: "2025-01-15",
+        endDate: "2025-01-30",
+        dedicationPercentage: 50
+      }
+    ],
+    cliente: "20345678901",
     comentarios: "Proyecto sin cotización previa. Emergencia por auditoría de seguridad en mina.",
     ubicacion: "Zona minera - Arequipa",
     servicio_brindado: "Dotación de equipos de seguridad para operaciones en mina subterránea",
@@ -69,7 +121,16 @@ export const proyectosDummyData: Proyecto[] = [
       { id_objeto: "I004", nombreObjeto: "Traje Bunker Completo", cantidad: 8, origen: "adicional" },
       { id_objeto: "I006", nombreObjeto: "Botas de Bombero Estructurales", cantidad: 15, origen: "adicional" }
     ],
-    cliente: "20456789012", // Municipalidad de Lima
+    personal_asignado: [
+      {
+        personalId: "P014",
+        nombrePersonal: "ANTHONY DANIEL VARGAS ROJAS",
+        role: "Supervisor de Proyecto",
+        startDate: "2025-03-01",
+        dedicationPercentage: 90
+      }
+    ],
+    cliente: "20456789012",
     informe_final: "informe_proj004.pdf",
     comentarios: "Renovación de equipamiento para brigada municipal de emergencias.",
     ubicacion: "Jr. de la Unión 300, Cercado de Lima",
@@ -87,7 +148,25 @@ export const proyectosDummyData: Proyecto[] = [
       { id_objeto: "I019", nombreObjeto: "Camilla Rígida de Rescate", cantidad: 3, origen: "adicional" },
       { id_objeto: "I024", nombreObjeto: "Oxímetro de Pulso Portátil", cantidad: 6, origen: "adicional" }
     ],
-    cliente: "20567890123", // Hospital Regional
+    personal_asignado: [
+      {
+        personalId: "P008",
+        nombrePersonal: "ALEJANDRO MARTIN CASTRO SILVA",
+        role: "Técnico de Mantenimiento",
+        startDate: "2025-02-10",
+        endDate: "2025-02-25",
+        dedicationPercentage: 100
+      },
+      {
+        personalId: "P013",
+        nombrePersonal: "ANGELA MARIA FLORES SANCHEZ",
+        role: "Especialista en SSOMA",
+        startDate: "2025-02-10",
+        endDate: "2025-02-25",
+        dedicationPercentage: 40
+      }
+    ],
+    cliente: "20567890123",
     factura: "factura_proj005.pdf",
     comentarios: "Actualización de equipos médicos de emergencia para ambulancias.",
     ubicacion: "Av. Grau 1350, Lima",
@@ -106,7 +185,23 @@ export const proyectosDummyData: Proyecto[] = [
       { id_objeto: "I002", nombreObjeto: "Manguera 1.5'' 30m", cantidad: 8, origen: "adicional" },
       { id_objeto: "I011", nombreObjeto: "Escalera Extensible 7.5m", cantidad: 2, origen: "adicional" }
     ],
-    cliente: "20234567890", // Centro Comercial Plaza del Sol
+    personal_asignado: [
+      {
+        personalId: "P007",
+        nombrePersonal: "ALEJANDRA SOFIA GARCIA LOPEZ",
+        role: "Analista de Sistemas",
+        startDate: "2025-03-15",
+        dedicationPercentage: 30
+      },
+      {
+        personalId: "P018",
+        nombrePersonal: "CARLOS EDUARDO SOTO RAMIREZ",
+        role: "Gerente de Operaciones",
+        startDate: "2025-03-15",
+        dedicationPercentage: 20
+      }
+    ],
+    cliente: "20234567890",
     comentarios: "Actualización del sistema contra incendios del centro comercial según nueva normativa.",
     ubicacion: "Av. Larco 1234, Miraflores, Lima",
     servicio_brindado: "Actualización de sistema contra incendios - Centro Comercial",
@@ -122,7 +217,17 @@ export const proyectosDummyData: Proyecto[] = [
       { id_objeto: "I017", nombreObjeto: "Cortador Hidráulico de Rescate", cantidad: 1, origen: "adicional" },
       { id_objeto: "I013", nombreObjeto: "Cuerdas de Rescate 50m", cantidad: 4, origen: "adicional" }
     ],
-    cliente: "20678901234", // Constructora Horizonte
+    personal_asignado: [
+      {
+        personalId: "P003",
+        nombrePersonal: "ABEL ANTONIO VILLODAS AGUIRRE",
+        role: "Operador de Equipos",
+        startDate: "2025-01-20",
+        endDate: "2025-02-05",
+        dedicationPercentage: 100
+      }
+    ],
+    cliente: "20678901234",
     informe_final: "informe_proj007.pdf",
     factura: "factura_proj007.pdf",
     comentarios: "Equipamiento de rescate para obra de construcción de gran altura.",
@@ -141,7 +246,16 @@ export const proyectosDummyData: Proyecto[] = [
       { id_objeto: "I009", nombreObjeto: "Linterna LED Alta Potencia", cantidad: 15, origen: "adicional" },
       { id_objeto: "I010", nombreObjeto: "Radio Portátil VHF", cantidad: 8, origen: "adicional" }
     ],
-    cliente: "20456123789", // Distribuidora Nacional
+    personal_asignado: [
+      {
+        personalId: "P011",
+        nombrePersonal: "ANDREA CAROLINA MORALES VEGA",
+        role: "Coordinadora de Ventas",
+        startDate: "2025-02-28",
+        dedicationPercentage: 50
+      }
+    ],
+    cliente: "20456123789",
     comentarios: "Equipamiento de seguridad para flota de distribución.",
     ubicacion: "Av. Industrial 2345, Ate, Lima",
     servicio_brindado: "Equipamiento de seguridad para flota vehicular",
@@ -157,7 +271,8 @@ export const proyectosDummyData: Proyecto[] = [
       { id_objeto: "I020", nombreObjeto: "Generador Portátil 5kW", cantidad: 2, origen: "adicional" },
       { id_objeto: "I018", nombreObjeto: "Monitor de Ventilación PPV", cantidad: 1, origen: "adicional" }
     ],
-    cliente: "20789456123", // Agroindustrias del Valle
+    personal_asignado: [],
+    cliente: "20789456123",
     comentarios: "Proyecto pausado por solicitud del cliente. Esperando aprobación de presupuesto adicional.",
     ubicacion: "Km 12 Carretera Ica, Ica",
     servicio_brindado: "Instalación de sistema de energía de respaldo - Planta procesadora",
@@ -174,7 +289,17 @@ export const proyectosDummyData: Proyecto[] = [
       { id_objeto: "I015", nombreObjeto: "Guantes de Bombero Estructurales", cantidad: 15, origen: "adicional" },
       { id_objeto: "I021", nombreObjeto: "Chaqueta de Bombero Wildland", cantidad: 12, origen: "adicional" }
     ],
-    cliente: "20567234901", // Grupo Hotelero Costa Verde
+    personal_asignado: [
+      {
+        personalId: "P019",
+        nombrePersonal: "CAROLINA BEATRIZ NAVARRO CRUZ",
+        role: "Asistente de Calidad",
+        startDate: "2025-02-15",
+        endDate: "2025-03-01",
+        dedicationPercentage: 70
+      }
+    ],
+    cliente: "20567234901",
     factura: "factura_proj010.pdf",
     comentarios: "Capacitación incluida para brigada contra incendios del hotel.",
     ubicacion: "Malecón Cisneros 1456, Miraflores, Lima",
@@ -189,7 +314,8 @@ export const proyectosDummyData: Proyecto[] = [
     id: "PROJ-011",
     camiones: ["C009"],
     inventario_proyecto: [],
-    cliente: "20123789456", // Inversiones Comerciales del Norte
+    personal_asignado: [],
+    cliente: "20123789456",
     comentarios: "Proyecto cancelado por falta de aprobación presupuestaria del cliente.",
     ubicacion: "Av. América 567, Trujillo",
     servicio_brindado: "Auditoría y actualización de sistema de seguridad - CANCELADO",
@@ -205,7 +331,16 @@ export const proyectosDummyData: Proyecto[] = [
       { id_objeto: "I001", nombreObjeto: "Extintor CO2 10lb", cantidad: 30, origen: "adicional" },
       { id_objeto: "I023", nombreObjeto: "Cono de Tráfico Reflectivo", cantidad: 80, origen: "adicional" }
     ],
-    cliente: "20345123678", // Servicios Logísticos Express
+    personal_asignado: [
+      {
+        personalId: "P009",
+        nombrePersonal: "ALICIA FERNANDA RUIZ PAREDES",
+        role: "Asistente Administrativa",
+        startDate: "2025-03-05",
+        dedicationPercentage: 40
+      }
+    ],
+    cliente: "20345123678",
     informe_final: "informe_proj012.pdf",
     comentarios: "Equipamiento de seguridad para nuevo centro de distribución.",
     ubicacion: "Av. Venezuela 1890, Callao",
@@ -217,7 +352,7 @@ export const proyectosDummyData: Proyecto[] = [
   }
 ];
 
-// Funciones auxiliares
+// Funciones auxiliares existentes...
 export const getProyectosActivos = () => proyectosDummyData.filter(p => 
   p.estado === "en_curso" || p.estado === "planificacion"
 );
@@ -233,6 +368,12 @@ export const getProyectosByCotizacion = (cotizacionId: string) =>
 
 export const getProyectosConCamion = (camionId: string) => 
   proyectosDummyData.filter(p => p.camiones.includes(camionId));
+
+// Nueva: Obtener proyectos por personal
+export const getProyectosByPersonal = (personalId: string) => 
+  proyectosDummyData.filter(p => 
+    p.personal_asignado.some(pa => pa.personalId === personalId)
+  );
 
 // Estadísticas
 export const getProyectosStats = () => {

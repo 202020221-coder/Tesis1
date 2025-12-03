@@ -17,11 +17,12 @@ export interface IPrivateRoute extends IRoute { roles?: string[]; }
 const DirectorioNavigation = lazy(() => import(/* webpackChunkName: DirectorioNavigation */ '@/directorio/routes/DirectorioNavigation' ));
 const ProcesosNavigation = lazy(() => import(/* webpackChunkName: ProcesosNavigation */ '@/procesos/routes/ProcesosNavigation' ));
 const InventarioNavigation = lazy(() => import(/* webpackChunkName: InventarioNavigation */ '@/Inventario/routes/InventarioNavigation' ));
+const HomeNavigation = lazy(() => import(/* webpackChunkName: HomeNavigation */ '@/home/routes/HomeNavigation' ));
 
 export const routes:IRoute[] = [
     {
         path: '/',
-        Component: DirectorioNavigation,
+        Component: HomeNavigation,
     },
         {
         path: '/procesos/*',
@@ -31,7 +32,10 @@ export const routes:IRoute[] = [
         path: '/Inventario/*',
         Component: InventarioNavigation,
     },
-
+    {
+        path: '/directorio',
+        Component: DirectorioNavigation,
+    },
     
 
 ];
